@@ -1,0 +1,39 @@
+# Dependências
+node_modules/
+.pnpm-store/
+
+# Segredos e ambiente (use .env.example como referência)
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Build
+dist/
+build/
+backend/dist/
+frontend/dist/
+
+# Dados gerados em execução
+backend/storage/
+storage/
+uploads/
+*.log
+logs/
+
+# Prisma
+backend/prisma/*.db
+backend/prisma/migrations/dev.db*
+
+# Sistema operacional e editores
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# Material de referência pesado (mantido fora do versionamento)
+exemplo/
+*.thumbnail
+.thumbnail

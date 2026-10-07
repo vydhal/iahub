@@ -1,0 +1,823 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------
+// ENUMS
+// ----------------------------------------------------
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum CampaignStatus {
+  DRAFT
+  PROCESSING
+  COMPLETED
+  FAILED
+  ARCHIVED
+}
+
+enum AgentType {
+  STRATEGIST
+  COPYWRITER
+  ART_DIRECTOR
+  IMAGE_GENERATOR
+  CRITIC
+  REVIEWER
+  PROJECT_MANAGER
+}
+
+enum WorkflowStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ----------------------------------------------------
+// ENTIDADES DE AUTENTICAÇÃO E WORKSPACE
+// ----------------------------------------------------
+
+model User {
+  id               String            @id @default(uuid())
+  name             String
+  email            String            @unique
+  passwordHash     String
+  avatarUrl        String?
+  role             String            @default("USER")   // SUPERADMIN | ADMIN | USER
+  active           Boolean           @default(true)
+  lastLoginAt      DateTime?
+  jobTitle         String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  memberships      WorkspaceMember[]
+  projectMembers   ProjectMember[]
+  usageRecords     UsageRecord[]
+
+  @@map("users")
+}
+
+model Workspace {
+  id               String            @id @default(uuid())
+  name             String
+  slug             String            @unique
+  plan             String            @default("Studio")
+  creditsTotal     Int               @default(5000)
+  creditsUsed      Int               @default(0)
+  creditsAlertPct  Int               @default(80)
+  defaultFormat    String            @default("1080 × 1080")
+  defaultVariationCount Int          @default(4)
+  autoReview       Boolean           @default(true)
+
+  // ── Conta do cliente (gerida pelo superadmin) ──
+  status           String            @default("active")  // active | suspended
+  suspendedAt      DateTime?
+  suspendedReason  String?
+  modules          Json?                                 // módulos contratados: {"carrossel":true,...}
+  maxBrands        Int               @default(3)
+  maxScheduledPosts Int              @default(100)
+  contactEmail     String?
+  notes            String?           @db.Text
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  members          WorkspaceMember[]
+  brands           Brand[]
+  projects         Project[]
+  campaigns        Campaign[]
+  agents           Agent[]
+  integrations     Integration[]
+  usageRecords     UsageRecord[]
+  credentials      Credential[]
+  agentExecutions  AgentExecution[]
+  approvals        ApprovalRequest[]
+  auditLogs        AuditLog[]
+  mediaAssets      MediaAsset[]
+  carousels        CarouselProject[]
+  subscription     Subscription?
+  invoices         Invoice[]
+  scheduledPosts   ScheduledPost[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+// ----------------------------------------------------
+// BRAND KIT (CONTEXTO DE MARCA PARA IA)
+// ----------------------------------------------------
+
+model Brand {
+  id             String           @id @default(uuid())
+  workspaceId    String
+  name           String
+  sector         String
+  description    String?          @db.Text
+  targetAudience String?          @db.Text
+  preferredWords String[]         @default([])
+  bannedWords    String[]         @default([])
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  colors         BrandColor[]
+  fonts          BrandFont[]
+  voices         BrandVoice[]
+  guidelines     BrandGuideline[]
+  products       BrandProduct[]
+  services       BrandService[]
+  assets         BrandAsset[]
+  projects       Project[]
+  campaigns      Campaign[]
+
+  @@map("brands")
+}
+
+model BrandColor {
+  id        String   @id @default(uuid())
+  brandId   String
+  name      String?
+  hex       String
+  usage     String?  // Ex: Primary, Secondary, Background
+  createdAt DateTime @default(now())
+
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("brand_colors")
+}
+
+model BrandFont {
+  id        String   @id @default(uuid())
+  brandId   String
+  fontName  String
+  fontType  String   // Ex: Header, Body, Mono
+  createdAt DateTime @default(now())
+
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("brand_fonts")
+}
+
+model BrandVoice {
+  id          String   @id @default(uuid())
+  brandId     String
+  tone        String   // Ex: Profissional, Inspirador, Descontraído
+  guidelines  String   @db.Text
+  createdAt   DateTime @default(now())
+
+  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("brand_voices")
+}
+
+model BrandGuideline {
+  id          String   @id @default(uuid())
+  brandId     String
+  title       String
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+
+  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("brand_guidelines")
+}
+
+model BrandProduct {
+  id          String   @id @default(uuid())
+  brandId     String
+  name        String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("brand_products")
+}
+
+model BrandService {
+  id          String   @id @default(uuid())
+  brandId     String
+  name        String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("brand_services")
+}
+
+model BrandAsset {
+  id          String   @id @default(uuid())
+  brandId     String
+  name        String
+  url         String
+  storageKey  String
+  mimeType    String
+  createdAt   DateTime @default(now())
+
+  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("brand_assets")
+}
+
+// ----------------------------------------------------
+// PROJETOS E CAMPANHAS
+// ----------------------------------------------------
+
+model Project {
+  id          String          @id @default(uuid())
+  workspaceId String
+  brandId     String?
+  name        String
+  description String?         @db.Text
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  brand       Brand?          @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  members     ProjectMember[]
+  campaigns   Campaign[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  userId    String
+  role      String   @default("CONTRIBUTOR")
+  createdAt DateTime @default(now())
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Campaign {
+  id          String          @id @default(uuid())
+  workspaceId String
+  projectId   String?
+  brandId     String?
+  name        String
+  description String?         @db.Text
+  objective   String?
+  audience    String?
+  tone        String?
+  contentType String?         @default("Campanha completa")
+  format      String?         @default("1080 × 1080")
+  status      CampaignStatus  @default(DRAFT)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project     Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  brand       Brand?          @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  creatives   Creative[]
+  workflows   WorkflowExecution[]
+
+  @@map("campaigns")
+}
+
+// ----------------------------------------------------
+// CREATIVE (PEÇAS E VERSIONAMENTO IMUTÁVEL)
+// ----------------------------------------------------
+
+model Creative {
+  id          String            @id @default(uuid())
+  campaignId  String
+  name        String
+  format      String            @default("1080 × 1080")
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  campaign    Campaign          @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  versions    CreativeVersion[]
+
+  @@map("creatives")
+}
+
+model CreativeVersion {
+  id               String               @id @default(uuid())
+  creativeId       String
+  versionNumber    Int                  @default(1)
+  headline         String?              @db.Text
+  subheadline      String?              @db.Text
+  cta              String?
+  caption          String?              @db.Text
+  hashtags         String[]             @default([])
+  visualDirection  String?              @db.Text
+  imagePrompt      String?              @db.Text
+  concept          String?              @db.Text
+  
+  // Avaliação / Crítica
+  overallScore     Int?
+  copyScore        Int?
+  compositionScore Int?
+  hierarchyScore   Int?
+  contrastScore    Int?
+  brandScore       Int?
+  strengths        String[]             @default([])
+  issues           String[]             @default([])
+  recommendations  String[]             @default([])
+
+  createdAt        DateTime             @default(now())
+
+  creative         Creative             @relation(fields: [creativeId], references: [id], onDelete: Cascade)
+  assets           CreativeAsset[]
+  refinements      RefinementRequest[]
+
+  @@map("creative_versions")
+}
+
+model CreativeAsset {
+  id                String          @id @default(uuid())
+  creativeVersionId String
+  storageKey        String
+  url               String
+  mimeType          String          @default("image/png")
+  size              Int?
+  width             Int?            @default(1080)
+  height            Int?            @default(1080)
+  createdAt         DateTime        @default(now())
+
+  creativeVersion   CreativeVersion @relation(fields: [creativeVersionId], references: [id], onDelete: Cascade)
+
+  @@map("creative_assets")
+}
+
+model RefinementRequest {
+  id                String          @id @default(uuid())
+  creativeVersionId String
+  userPrompt        String          @db.Text
+  targetAspects     String[]        @default([])
+  createdAt         DateTime        @default(now())
+
+  creativeVersion   CreativeVersion @relation(fields: [creativeVersionId], references: [id], onDelete: Cascade)
+
+  @@map("refinement_requests")
+}
+
+// ----------------------------------------------------
+// AGENTES DE IA E PROVEDORES
+// ----------------------------------------------------
+
+model Agent {
+  id            String    @id @default(uuid())
+  workspaceId   String?
+  name          String
+  initials      String
+  description   String
+  type          AgentType @default(STRATEGIST)
+  provider      String    @default("OpenAI")
+  model         String    @default("GPT-4o")
+  temperature   String    @default("0.5")
+  systemPrompt  String    @db.Text
+  tools         String[]  @default([])
+  niche         String    @default("Marketing & Conteúdo")
+  enabled       Boolean   @default(true)
+  runs          Int       @default(0)
+
+  // ── Agent Operations (piloto RPA/orquestração) ──
+  // kind: STUDIO = agente descritivo da esteira criativa; OPERATIONAL = executa playbook
+  kind              String    @default("STUDIO")
+  status            String    @default("DRAFT")    // DRAFT | TESTING | ACTIVE | PAUSED
+  objective         String?   @db.Text
+  executionProvider String    @default("native")
+  autonomyLevel     String    @default("REQUIRE_APPROVAL") // READ_ONLY | RECOMMEND | REQUIRE_APPROVAL | CONTROLLED_AUTONOMY
+  toolIds           String[]  @default([])       // ferramentas do Tool Gateway liberadas para o agente
+  playbook          Json?                        // etapas executáveis [{id,label,tool,input,requireApproval}]
+  allowedDomains    String[]  @default([])       // allowlist de domínios para http/browser
+  scheduleType      String    @default("manual") // manual | daily | weekly | monthly | cron | webhook
+  scheduleConfig    Json?                        // {time:"18:00", weekdays:[1..5], dayOfMonth, cron}
+  timezone          String    @default("America/Sao_Paulo")
+  webhookToken      String?   @unique
+  maxDurationSec    Int       @default(300)
+  maxRetries        Int       @default(2)
+  maxActions        Int       @default(50)
+  alertCredentialId String?                      // canal para avisar falhas que exigem intervenção
+  estimatedMinutesSaved Int   @default(0)        // tempo manual poupado por execução concluída (ROI)
+  lastTestAt        DateTime?
+  lastTestOk        Boolean?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  workspace     Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  executions    AgentExecution[]
+
+  @@index([workspaceId])
+  @@map("agents")
+}
+
+// ----------------------------------------------------
+// AGENT OPERATIONS CENTER — execução, credenciais, aprovação, auditoria
+// ----------------------------------------------------
+
+model Credential {
+  id            String    @id @default(uuid())
+  workspaceId   String
+  name          String
+  type          String    // login | api_key | oauth | telegram_bot | smtp | webhook | browser_session
+  encryptedData String    @db.Text             // AES-256-GCM — nunca devolvido pela API
+  metadata      Json?                          // dados não sensíveis (ex: host, chatId mascarado)
+  status        String    @default("active")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, name])
+  @@map("credentials")
+}
+
+model AgentExecution {
+  id               String    @id @default(uuid())
+  workspaceId      String
+  agentId          String
+  status           String    @default("queued") // queued | running | waiting_approval | completed | failed | cancelled
+  trigger          String    @default("manual") // manual | schedule | webhook | test
+  sandbox          Boolean   @default(false)
+  input            Json?
+  output           Json?
+  state            Json?                         // contexto persistido para retomar (retry/aprovação)
+  error            String?   @db.Text
+  errorKind        String?                       // RECOVERABLE | INTERVENTION_REQUIRED | POLICY_BLOCKED | TIMEOUT
+  failedStep       String?
+  attempts         Int       @default(0)
+  actionsCount     Int       @default(0)
+  tokensInput      Int       @default(0)
+  tokensOutput     Int       @default(0)
+  cost             Float     @default(0)
+  model            String?
+  approvalRequired Boolean   @default(false)
+  queuedAt         DateTime  @default(now())
+  startedAt        DateTime?
+  finishedAt       DateTime?
+
+  agent            Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  logs             AgentExecutionLog[]
+  approvals        ApprovalRequest[]
+
+  @@index([workspaceId, queuedAt])
+  @@index([agentId, queuedAt])
+  @@map("agent_executions")
+}
+
+model AgentExecutionLog {
+  id          String         @id @default(uuid())
+  executionId String
+  level       String         @default("info") // info | warn | error | action
+  stepId      String?
+  tool        String?
+  message     String         @db.Text
+  data        Json?
+  durationMs  Int?
+  createdAt   DateTime       @default(now())
+
+  execution   AgentExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId, createdAt])
+  @@map("agent_execution_logs")
+}
+
+model ApprovalRequest {
+  id             String         @id @default(uuid())
+  workspaceId    String
+  executionId    String
+  agentId        String
+  stepId         String
+  title          String
+  proposedAction Json
+  status         String         @default("pending") // pending | approved | rejected | expired
+  decidedById    String?
+  decisionNote   String?        @db.Text
+  createdAt      DateTime       @default(now())
+  decidedAt      DateTime?
+
+  execution      AgentExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@map("approval_requests")
+}
+
+model AuditLog {
+  id          String    @id @default(uuid())
+  workspaceId String
+  userId      String?
+  action      String    // ex: agent.activate, credential.create, approval.approve
+  entity      String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@map("audit_logs")
+}
+
+model Integration {
+  id            String              @id @default(uuid())
+  workspaceId   String
+  provider      String
+  name          String
+  model         String
+  endpoint      String?
+  apiKey        String?             // Criptografado ou mascarado
+  statusKind    String              @default("ok") // ok, wait, warn
+  statusLabel   String              @default("CONECTADO")
+  usagePct      Int                 @default(0)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  workspace     Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("integrations")
+}
+
+// ----------------------------------------------------
+// WORKFLOW ENGINE & EXECUÇÕES ASSÍNCRONAS
+// ----------------------------------------------------
+
+model WorkflowExecution {
+  id            String                  @id @default(uuid())
+  campaignId    String
+  correlationId String                  @default(uuid())
+  status        WorkflowStatus          @default(PENDING)
+  currentStep   Int                     @default(0)
+  totalSteps    Int                     @default(7)
+  startedAt     DateTime                @default(now())
+  completedAt   DateTime?
+  error         String?                 @db.Text
+
+  campaign      Campaign                @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  steps         WorkflowExecutionStep[]
+
+  @@map("workflow_executions")
+}
+
+model WorkflowExecutionStep {
+  id                  String            @id @default(uuid())
+  workflowExecutionId String
+  stepNumber          Int
+  name                String
+  status              WorkflowStatus    @default(PENDING)
+  agentName           String?
+  provider            String?
+  model               String?
+  input               Json?
+  output              Json?
+  tokensInput         Int?              @default(0)
+  tokensOutput        Int?              @default(0)
+  estimatedCost       Float?            @default(0.0)
+  durationSeconds     Float?            @default(0.0)
+  startedAt           DateTime?
+  completedAt         DateTime?
+  error               String?           @db.Text
+
+  workflowExecution   WorkflowExecution @relation(fields: [workflowExecutionId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_execution_steps")
+}
+
+// ----------------------------------------------------
+// CONSUMO E REGISTRO DE USO (USAGE)
+// ----------------------------------------------------
+
+model UsageRecord {
+  id            String    @id @default(uuid())
+  workspaceId   String
+  userId        String?
+  provider      String
+  model         String
+  operation     String    // Ex: text_gen, image_gen, review
+  tokensInput   Int       @default(0)
+  tokensOutput  Int       @default(0)
+  imageCount    Int       @default(0)
+  estimatedCost Float     @default(0.0)
+  agentExecutionId String?
+  metadata      Json?     // ações, tempo de browser, integrações usadas
+  createdAt     DateTime  @default(now())
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("usage_records")
+}
+
+// ----------------------------------------------------
+// MÍDIA (uploads e peças exportadas)
+// ----------------------------------------------------
+
+model MediaAsset {
+  id          String   @id @default(uuid())
+  workspaceId String
+  name        String
+  kind        String   @default("image")
+  mimeType    String
+  size        Int      @default(0)
+  storageKey  String                       // caminho relativo em storage/media/
+  origin      String   @default("upload")  // upload | ai | export
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@map("media_assets")
+}
+
+// ----------------------------------------------------
+// EDITOR DE POSTS (CARROSSEL)
+// ----------------------------------------------------
+
+model CarouselProject {
+  id          String   @id @default(uuid())
+  workspaceId String
+  createdById String?
+  name        String
+  topic       String?  @db.Text
+  format      String   @default("4:5")
+  status      String   @default("DRAFT")   // DRAFT | READY | PUBLISHED
+  brand       Json?                        // etiqueta, @, data, avatar
+  theme       Json?                        // fonte, cor de destaque, tinta
+  slides      Json                         // lista de slides do carrossel
+  slideCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, updatedAt])
+  @@map("carousel_projects")
+}
+
+// ----------------------------------------------------
+// COBRANÇA (planos, assinatura, faturas)
+// ----------------------------------------------------
+
+model Plan {
+  id                   String   @id @default(uuid())
+  code                 String   @unique
+  name                 String
+  description          String?
+  priceCents           Int      @default(0)
+  currency             String   @default("BRL")
+  creditsIncluded      Int      @default(0)
+  overageCentsPerCredit Int     @default(0)   // preço do crédito excedente
+  maxAgents            Int      @default(0)   // 0 = sem limite
+  maxBrands            Int      @default(3)
+  maxScheduledPosts    Int      @default(100)
+  modules              String[] @default([])  // módulos liberados por padrão neste plano
+  features             String[] @default([])
+  active               Boolean  @default(true)
+  sortOrder            Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  subscriptions        Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                 String   @id @default(uuid())
+  workspaceId        String   @unique
+  planId             String
+  status             String   @default("active")   // active | canceled | past_due
+  currentPeriodStart DateTime @default(now())
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean  @default(false)
+  gateway            String   @default("manual")   // manual | mercadopago
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  plan               Plan      @relation(fields: [planId], references: [id])
+
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id            String    @id @default(uuid())
+  workspaceId   String
+  number        String    @unique
+  periodStart   DateTime
+  periodEnd     DateTime
+  subtotalCents Int       @default(0)
+  overageCents  Int       @default(0)
+  totalCents    Int       @default(0)
+  currency      String    @default("BRL")
+  status        String    @default("open")     // open | paid | overdue | canceled
+  dueDate       DateTime
+  lines         Json                            // [{descricao, quantidade, valorUnitario, total}]
+  gateway       String?                         // mercadopago | manual
+  externalId    String?                         // id da order no gateway
+  checkoutUrl   String?
+  paymentMethod String?
+  paidAt        DateTime?
+  note          String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  events        PaymentEvent[]
+
+  @@index([workspaceId, createdAt])
+  @@index([externalId])
+  @@map("invoices")
+}
+
+model PaymentEvent {
+  id          String   @id @default(uuid())
+  invoiceId   String?
+  gateway     String
+  externalId  String?
+  type        String
+  status      String?
+  payload     Json?
+  createdAt   DateTime @default(now())
+
+  invoice     Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([gateway, externalId])
+  @@map("payment_events")
+}
+
+
+// ----------------------------------------------------
+// AGENDADOR DE POSTS
+// ----------------------------------------------------
+
+model ScheduledPost {
+  id           String    @id @default(uuid())
+  workspaceId  String
+  carouselId   String?
+  createdById  String?
+  title        String
+  caption      String    @db.Text
+  channel      String                              // telegram | email | webhook | lembrete
+  credentialName String?                           // credencial do cofre usada na entrega
+  recipients   String[]  @default([])              // e-mails, quando o canal é e-mail
+  assetIds     String[]  @default([])              // imagens (media_assets) que acompanham o post
+  scheduledFor DateTime
+  timezone     String    @default("America/Sao_Paulo")
+  status       String    @default("scheduled")     // scheduled | publishing | published | failed | canceled
+  attempts     Int       @default(0)
+  error        String?   @db.Text
+  result       Json?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, scheduledFor])
+  @@map("scheduled_posts")
+}
+
+// ----------------------------------------------------
+// IDENTIDADE DA PLATAFORMA (personalizada pelo superadmin)
+// ----------------------------------------------------
+
+model PlatformSettings {
+  id            String   @id @default("singleton")
+  productName   String   @default("AI Creative Studio")
+  tagline       String   @default("AI ORCHESTRATION")
+  loginHeadline String   @default("Entre para continuar")
+  loginMessage  String?  @db.Text
+  supportEmail  String?
+  accentColor   String   @default("#17594E")
+  logoPath      String?                        // arquivo em storage/platform/
+  updatedAt     DateTime @updatedAt
+
+  @@map("platform_settings")
+}

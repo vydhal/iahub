@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:'Instrument Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font-family:inherit}
+a{color:inherit;text-decoration:none}
+a:hover{color:var(--accent)}
+.app{--bg:#F7F6F3;--surface:#FFFFFF;--surface2:#F1EFEA;--border:rgba(20,20,16,.10);--bstrong:rgba(20,20,16,.20);--ink:#14140F;--ink2:#56564D;--ink3:#8B8B81;--accent:#17594E;--asoft:rgba(23,89,78,.08);--onacc:#FFFFFF;--ok:#2E7D5B;--warn:#A9701A;--err:#B0402C;--shadow:0 1px 2px rgba(20,20,16,.05),0 8px 24px -12px rgba(20,20,16,.10)}
+.app[data-theme="dark"]{--bg:#0B0C0B;--surface:#141614;--surface2:#1C1E1B;--border:rgba(255,255,255,.10);--bstrong:rgba(255,255,255,.22);--ink:#F2F1EC;--ink2:#A8A8A0;--ink3:#75756D;--accent:#5FD3B4;--asoft:rgba(95,211,180,.12);--onacc:#07120F;--ok:#5FD3B4;--warn:#E0B25C;--err:#E88A74;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes shim{0%{background-position:-320px 0}100%{background-position:320px 0}}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.fu{animation:fu .32s cubic-bezier(.2,.8,.2,1) both}
+@media (max-width:960px){
+.sb{display:none!important}
+.mb{display:flex!important}
+.mainpad{padding:18px 16px 104px!important}
+.g4{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.g3,.g2{grid-template-columns:1fr!important}
+.hidem{display:none!important}
+.stack{flex-direction:column!important;align-items:stretch!important}
+}
+</style>
+</helmet>
+<div class="app" data-theme="{{ theme }}" style="min-height:100vh;background:var(--bg);color:var(--ink);display:flex">
+
+<aside class="sb" style="width:248px;flex:0 0 248px;height:100vh;position:sticky;top:0;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;padding:18px 14px">
+  <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px">
+    <div style="width:28px;height:28px;border-radius:8px;background:var(--ink);display:grid;place-items:center">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--surface)" stroke-width="1.6"><path d="M12 3.5l2.1 5.4 5.4 2.1-5.4 2.1L12 18.5l-2.1-5.4L4.5 11l5.4-2.1z"/></svg>
+    </div>
+    <div style="line-height:1.05">
+      <div style="font-size:13.5px;font-weight:600;letter-spacing:-.01em">Creative Studio</div>
+      <div style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:var(--ink3)">AI ORCHESTRATION</div>
+    </div>
+  </div>
+
+  <button onClick="{{ openWorkspace }}" style="display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;margin-bottom:16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;cursor:pointer;text-align:left" style-hover="border-color:var(--bstrong)">
+    <span style="width:20px;height:20px;border-radius:6px;background:var(--accent);color:var(--onacc);font-size:10px;font-weight:700;display:grid;place-items:center">S</span>
+    <span style="flex:1;min-width:0"><span style="display:block;font-size:12.5px;font-weight:500;color:var(--ink)">Simplisoft</span><span style="display:block;font-size:10.5px;color:var(--ink3)">Workspace · Plano Studio</span></span>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="2"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
+  </button>
+
+  <nav style="display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex:1">
+    <sc-for list="{{ navMain }}" as="n" hint-placeholder-count="3">
+      <button onClick="{{ n.go }}" style="{{ n.style }}" style-hover="background:var(--surface2)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 16px;opacity:.9"><path d="{{ n.icon }}"/></svg>
+        <span style="flex:1;text-align:left">{{ n.label }}</span>
+        <sc-if value="{{ n.count }}" hint-placeholder-val="{{ false }}"><span style="font:500 10px/1 'JetBrains Mono',monospace;color:var(--ink3)">{{ n.count }}</span></sc-if>
+      </button>
+    </sc-for>
+    <div style="height:1px;background:var(--border);margin:12px 6px"></div>
+    <sc-for list="{{ navSys }}" as="n" hint-placeholder-count="3">
+      <button onClick="{{ n.go }}" style="{{ n.style }}" style-hover="background:var(--surface2)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 16px;opacity:.9"><path d="{{ n.icon }}"/></svg>
+        <span style="flex:1;text-align:left">{{ n.label }}</span>
+      </button>
+    </sc-for>
+  </nav>
+
+  <div style="margin-top:14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface2)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:var(--ink3)">CRÉDITOS</span>
+      <span style="font-size:11.5px;font-weight:600">{{ credits.used }} / {{ credits.total }}</span>
+    </div>
+    <div style="height:4px;border-radius:99px;background:var(--border);overflow:hidden"><div style="{{ credits.barStyle }}"></div></div>
+    <div style="margin-top:9px;font-size:11px;color:var(--ink3)">Renova em 12 dias</div>
+  </div>
+</aside>
+
+<main style="flex:1;min-width:0;display:flex;flex-direction:column">
+  <header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:12px 26px;border-bottom:1px solid var(--border);background:color-mix(in oklab,var(--bg) 82%,transparent);backdrop-filter:blur(12px)">
+    <button class="hidem" onClick="{{ openCmd }}" style="display:flex;align-items:center;gap:9px;flex:1;max-width:420px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer;color:var(--ink3)" style-hover="border-color:var(--bstrong)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+      <span style="font-size:12.5px">Buscar projetos, marcas, prompts…</span>
+      <span style="margin-left:auto;font:500 10px/1 'JetBrains Mono',monospace;padding:3px 5px;border:1px solid var(--border);border-radius:5px">⌘K</span>
+    </button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 10px 5px 8px;border:1px solid var(--border);border-radius:99px;background:var(--surface)">
+      <span style="width:6px;height:6px;border-radius:99px;background:var(--accent);animation:pulse 1.8s ease-in-out infinite"></span>
+      <span style="font-size:11.5px;color:var(--ink2)">{{ agentsActive }} agentes ativos</span>
+    </div>
+    <button onClick="{{ toggleTheme }}" title="Tema" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;color:var(--ink2)" style-hover="border-color:var(--bstrong)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="{{ themeIcon }}"/></svg>
+    </button>
+    <button onClick="{{ toast }}" style="position:relative;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;color:var(--ink2)" style-hover="border-color:var(--bstrong)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 10-12 0c0 6-2 7-2 7h16s-2-1-2-7M13.7 20a2 2 0 01-3.4 0"/></svg>
+      <span style="position:absolute;top:6px;right:7px;width:5px;height:5px;border-radius:99px;background:var(--err)"></span>
+    </button>
+    <div style="width:32px;height:32px;border-radius:99px;background:var(--ink);color:var(--surface);display:grid;place-items:center;font-size:12px;font-weight:600">VC</div>
+  </header>
+
+  <div class="mainpad" style="padding:30px 26px 60px;flex:1">
+
+  <!-- ══ DASHBOARD ══ -->
+  <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+  <div class="fu" style="max-width:1180px;margin:0 auto">
+    <div class="stack" style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:34px">
+      <div>
+        <div style="font:400 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:14px">SEG, 07 SET · 09:14</div>
+        <h1 style="margin:0;font-size:38px;font-weight:600;letter-spacing:-.03em;line-height:1.05">Bom dia, Vidal</h1>
+        <p style="margin:8px 0 0;font-family:'Instrument Serif',serif;font-style:italic;font-size:23px;color:var(--ink2)">O que vamos criar hoje?</p>
+      </div>
+      <button onClick="{{ goCriar }}" style="display:inline-flex;align-items:center;gap:8px;padding:12px 18px;background:var(--ink);color:var(--surface);border:none;border-radius:11px;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:var(--shadow)" style-hover="opacity:.88">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nova criação
+      </button>
+    </div>
+
+    <div class="g4" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:34px">
+      <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+        <div style="padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+          <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:var(--ink3)">{{ s.label }}</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px">
+            <span style="font-size:31px;font-weight:600;letter-spacing:-.03em">{{ s.value }}</span>
+            <span style="{{ s.deltaStyle }}">{{ s.delta }}</span>
+          </div>
+          <div style="margin-top:6px;font-size:11.5px;color:var(--ink3)">{{ s.note }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div class="g2" style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:26px">
+      <section>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <h2 style="margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em">Criações recentes</h2>
+          <button onClick="{{ goProjetos }}" style="background:none;border:none;font-size:12px;color:var(--ink3);cursor:pointer" style-hover="color:var(--ink)">Ver todos →</button>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--surface);overflow:hidden">
+          <sc-for list="{{ recents }}" as="p" hint-placeholder-count="4">
+            <button onClick="{{ p.open }}" style="display:flex;align-items:center;gap:14px;width:100%;padding:13px 15px;background:none;border:none;border-bottom:1px solid var(--border);cursor:pointer;text-align:left" style-hover="background:var(--surface2)">
+              <span style="{{ p.thumb }}"></span>
+              <span style="flex:1;min-width:0">
+                <span style="display:block;font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+                <span style="display:block;margin-top:3px;font-size:11.5px;color:var(--ink3)">{{ p.meta }}</span>
+              </span>
+              <span style="{{ p.badge }}">{{ p.status }}</span>
+              <span style="font:500 10.5px/1 'JetBrains Mono',monospace;color:var(--ink3);width:34px;text-align:right">{{ p.versions }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section>
+        <h2 style="margin:0 0 14px;font-size:15px;font-weight:600;letter-spacing:-.01em">Comece uma criação</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <sc-for list="{{ quick }}" as="q" hint-placeholder-count="8">
+            <button onClick="{{ goCriar }}" style="display:flex;flex-direction:column;gap:12px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;text-align:left" style-hover="border-color:var(--bstrong);transform:translateY(-1px)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"><path d="{{ q.icon }}"/></svg>
+              <span><span style="display:block;font-size:12.5px;font-weight:600;color:var(--ink)">{{ q.label }}</span><span style="display:block;margin-top:2px;font:400 10px/1 'JetBrains Mono',monospace;color:var(--ink3)">{{ q.spec }}</span></span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ══ NOVA CRIAÇÃO ══ -->
+  <sc-if value="{{ isCriar }}" hint-placeholder-val="{{ false }}">
+  <div class="fu" style="max-width:840px;margin:0 auto">
+    <div style="font:400 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:12px">BRIEFING · ETAPA 1 DE 2</div>
+    <h1 style="margin:0 0 6px;font-size:33px;font-weight:600;letter-spacing:-.03em">Nova criação</h1>
+    <p style="margin:0 0 30px;font-family:'Instrument Serif',serif;font-style:italic;font-size:20px;color:var(--ink2)">Descreva a intenção. O estúdio cuida da estratégia, da copy e da arte.</p>
+
+    <div style="padding:22px;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">O que você quer criar?</label>
+      <textarea value="{{ brief }}" onChange="{{ setBrief }}" rows="4" placeholder="Ex: Crie uma campanha para divulgar nosso novo serviço de internet empresarial para pequenas empresas." style="width:100%;padding:14px;font-size:14.5px;line-height:1.55;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:12px;resize:vertical;outline:none"></textarea>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:12px">
+        <sc-for list="{{ briefHints }}" as="h" hint-placeholder-count="3">
+          <button onClick="{{ h.apply }}" style="padding:6px 11px;font-size:11.5px;color:var(--ink2);background:none;border:1px dashed var(--border);border-radius:99px;cursor:pointer" style-hover="border-color:var(--accent);color:var(--accent)">{{ h.label }}</button>
+        </sc-for>
+      </div>
+
+      <div style="height:1px;background:var(--border);margin:24px 0"></div>
+
+      <div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:20px 22px">
+        <sc-for list="{{ fields }}" as="f" hint-placeholder-count="4">
+          <div>
+            <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:9px">
+              <span style="font-size:12.5px;font-weight:600">{{ f.label }}</span>
+              <span style="font:400 10px/1 'JetBrains Mono',monospace;color:var(--ink3)">{{ f.hint }}</span>
+            </div>
+            <sc-if value="{{ f.isText }}" hint-placeholder-val="{{ false }}">
+              <input value="{{ f.value }}" onChange="{{ f.set }}" placeholder="{{ f.placeholder }}" style="width:100%;padding:10px 12px;font-size:13px;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:10px;outline:none">
+            </sc-if>
+            <sc-if value="{{ f.isChips }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="4">
+                  <button onClick="{{ o.pick }}" style="{{ o.style }}">{{ o.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <div class="stack" style="display:flex;align-items:center;gap:14px;margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
+        <div style="flex:1;font-size:11.5px;color:var(--ink3);line-height:1.5">7 etapas orquestradas · estimativa de 2 min · ~48 créditos</div>
+        <button onClick="{{ startWorkflow }}" style="display:inline-flex;align-items:center;gap:9px;padding:12px 20px;background:var(--ink);color:var(--surface);border:none;border-radius:11px;font-size:13.5px;font-weight:600;cursor:pointer" style-hover="opacity:.88">
+          Começar criação
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ══ WORKFLOW ══ -->
+  <sc-if value="{{ isFlow }}" hint-placeholder-val="{{ false }}">
+  <div class="fu" style="max-width:900px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:38px">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border:1px solid var(--border);border-radius:99px;background:var(--surface);margin-bottom:18px">
+        <span style="width:6px;height:6px;border-radius:99px;background:var(--accent);animation:pulse 1.4s infinite"></span>
+        <span style="font:500 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.08em;color:var(--ink2)">ESTÚDIO EM PRODUÇÃO</span>
+      </div>
+      <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-.03em">Criando sua campanha</h1>
+      <p style="margin:10px auto 0;max-width:520px;font-size:14px;line-height:1.6;color:var(--ink2)">Internet empresarial · Simplisoft · tom profissional. Você pode sair desta tela: avisamos quando estiver pronta.</p>
+      <div style="max-width:420px;margin:24px auto 0;height:3px;border-radius:99px;background:var(--border);overflow:hidden"><div style="{{ flowBar }}"></div></div>
+    </div>
+
+    <div style="border:1px solid var(--border);border-radius:16px;background:var(--surface);overflow:hidden">
+      <sc-for list="{{ steps }}" as="s" hint-placeholder-count="7">
+        <div style="display:flex;gap:16px;padding:16px 20px;border-bottom:1px solid var(--border)">
+          <div style="{{ s.dot }}">{{ s.mark }}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:500 10.5px/1 'JetBrains Mono',monospace;color:var(--ink3)">{{ s.num }}</span>
+              <span style="{{ s.titleStyle }}">{{ s.label }}</span>
+              <span style="margin-left:auto;{{ s.stateStyle }}">{{ s.state }}</span>
+            </div>
+            <div style="margin-top:5px;font-size:12px;color:var(--ink3)">{{ s.detail }}</div>
+            <sc-if value="{{ s.showTech }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:11px;padding:11px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">
+                <sc-for list="{{ s.tech }}" as="t" hint-placeholder-count="3">
+                  <span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:var(--ink3)">{{ t.k }} <span style="color:var(--ink)">{{ t.v }}</span></span>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+      <div class="stack" style="display:flex;align-items:center;gap:12px;padding:14px 20px">
+        <button onClick="{{ toggleTech }}" style="display:inline-flex;align-items:center;gap:7px;background:none;border:none;font-size:12.5px;color:var(--ink2);cursor:pointer;padding:0" style-hover="color:var(--ink)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="{{ techIcon }}"/></svg>{{ techLabel }}
+        </button>
+        <div style="flex:1"></div>
+        <button onClick="{{ goResultado }}" style="padding:9px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="border-color:var(--bstrong)">Ir para o resultado</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ══ RESULTADO ══ -->
+  <sc-if value="{{ isRes }}" hint-placeholder-val="{{ false }}">
+  <div class="fu" style="max-width:1180px;margin:0 auto">
+    <div class="stack" style="display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:12px">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:7px;padding:4px 10px;border-radius:99px;background:var(--asoft);color:var(--accent);font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.1em;margin-bottom:14px">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>PRONTA EM 1M 52S
+        </div>
+        <h1 style="margin:0;font-size:33px;font-weight:600;letter-spacing:-.03em">Campanha pronta</h1>
+        <p style="margin:8px 0 0;font-size:13.5px;color:var(--ink3)">Internet empresarial PME · Simplisoft · 4 variações · v4</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onClick="{{ toast }}" style="padding:10px 15px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="border-color:var(--bstrong)">Exportar</button>
+        <button onClick="{{ toast }}" style="padding:10px 15px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="opacity:.88">Entregar campanha</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:4px;margin:26px 0 24px;border-bottom:1px solid var(--border)">
+      <sc-for list="{{ resTabs }}" as="t" hint-placeholder-count="5">
+        <button onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+      </sc-for>
+    </div>
+
+    <!-- copy -->
+    <sc-if value="{{ tabCopy }}" hint-placeholder-val="{{ true }}">
+    <div class="g2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.85fr);gap:22px">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ copyBlocks }}" as="c" hint-placeholder-count="4">
+          <div style="padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3)">{{ c.label }}</span>
+              <button onClick="{{ toast }}" style="background:none;border:none;font-size:11px;color:var(--ink3);cursor:pointer" style-hover="color:var(--ink)">copiar</button>
+            </div>
+            <div style="{{ c.textStyle }}">{{ c.text }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+          <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:12px">LEGENDA · INSTAGRAM</div>
+          <p style="margin:0;font-size:13.5px;line-height:1.65;color:var(--ink2);white-space:pre-line">{{ legenda }}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+            <sc-for list="{{ hashtags }}" as="h" hint-placeholder-count="6">
+              <span style="padding:4px 9px;font:400 11px/1 'JetBrains Mono',monospace;color:var(--accent);background:var(--asoft);border-radius:6px">{{ h }}</span>
+            </sc-for>
+          </div>
+        </div>
+        <div style="padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+          <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:12px">ESTRATÉGIA</div>
+          <sc-for list="{{ strategy }}" as="s" hint-placeholder-count="4">
+            <div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)">
+              <span style="width:88px;flex:0 0 88px;font-size:11.5px;color:var(--ink3)">{{ s.k }}</span>
+              <span style="flex:1;font-size:12.5px;line-height:1.5;color:var(--ink)">{{ s.v }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- artes -->
+    <sc-if value="{{ tabArtes }}" hint-placeholder-val="{{ false }}">
+    <div class="g4" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+      <sc-for list="{{ artes }}" as="a" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button onClick="{{ a.open }}" style="{{ a.frame }}" style-hover="border-color:var(--bstrong)">
+            <span style="{{ a.canvas }}">
+              <span style="font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:rgba(255,255,255,.72)">SIMPLISOFT</span>
+              <span style="display:block">
+                <span style="display:block;font-size:19px;font-weight:600;line-height:1.15;letter-spacing:-.02em;color:#fff">{{ a.headline }}</span>
+                <span style="display:inline-block;margin-top:12px;padding:6px 11px;border-radius:7px;background:#fff;color:#101210;font-size:10px;font-weight:600">{{ a.cta }}</span>
+              </span>
+            </span>
+            <sc-if value="{{ a.fav }}" hint-placeholder-val="{{ false }}">
+              <span style="position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:99px;background:rgba(0,0,0,.5);display:grid;place-items:center;color:#fff;font-size:11px">★</span>
+            </sc-if>
+          </button>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="flex:1;font-size:12px;font-weight:600">{{ a.name }}</span>
+            <span style="font:400 10px/1 'JetBrains Mono',monospace;color:var(--ink3)">{{ a.size }}</span>
+          </div>
+          <div style="display:flex;gap:5px">
+            <sc-for list="{{ a.actions }}" as="ac" hint-placeholder-count="4">
+              <button onClick="{{ ac.run }}" title="{{ ac.title }}" style="width:29px;height:29px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--ink2)" style-hover="border-color:var(--bstrong);color:var(--ink)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="{{ ac.icon }}"/></svg>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+
+    <!-- direção criativa -->
+    <sc-if value="{{ tabDir }}" hint-placeholder-val="{{ false }}">
+    <div class="g2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px">
+      <div style="padding:22px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:18px">
+          <span style="width:24px;height:24px;border-radius:7px;background:var(--asoft);color:var(--accent);display:grid;place-items:center;font-size:11px;font-weight:700">DA</span>
+          <span style="font-size:12.5px;font-weight:600">Direção criativa</span>
+          <span style="margin-left:auto;font:400 10px/1 'JetBrains Mono',monospace;color:var(--ink3)">AGENTE · DIRETOR DE ARTE</span>
+        </div>
+        <p style="margin:0 0 20px;font-family:'Instrument Serif',serif;font-size:20px;line-height:1.35;color:var(--ink)">Ambiente corporativo real, luz natural difusa e presença de infraestrutura discreta — a conexão como parte da arquitetura do negócio.</p>
+        <sc-for list="{{ direction }}" as="d" hint-placeholder-count="7">
+          <div style="display:flex;gap:14px;padding:11px 0;border-top:1px solid var(--border)">
+            <span style="width:106px;flex:0 0 106px;font:600 10px/1.4 'JetBrains Mono',monospace;letter-spacing:.08em;color:var(--ink3)">{{ d.k }}</span>
+            <span style="flex:1;font-size:12.5px;line-height:1.55;color:var(--ink)">{{ d.v }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="padding:22px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+          <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:14px">PALETA</div>
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ palette }}" as="c" hint-placeholder-count="5">
+              <div style="flex:1">
+                <div style="{{ c.swatch }}"></div>
+                <div style="margin-top:7px;font:400 9.5px/1 'JetBrains Mono',monospace;color:var(--ink3)">{{ c.hex }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="padding:22px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+          <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:12px">PROMPT VISUAL</div>
+          <p style="margin:0;font:400 12px/1.7 'JetBrains Mono',monospace;color:var(--ink2)">{{ prompt }}</p>
+          <button onClick="{{ toast }}" style="margin-top:14px;padding:8px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="border-color:var(--bstrong)">Salvar na biblioteca</button>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- análise -->
+    <sc-if value="{{ tabCrit }}" hint-placeholder-val="{{ false }}">
+    <div class="g2" style="display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1fr);gap:22px">
+      <div style="padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:20px">
+          <span style="font-size:12.5px;font-weight:600">Análise da peça</span>
+          <span style="margin-left:auto;font:400 10px/1 'JetBrains Mono',monospace;color:var(--ink3)">AGENTE · CRÍTICO</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:22px;margin-bottom:24px">
+          <div style="position:relative;width:104px;height:104px;flex:0 0 104px">
+            <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)">
+              <circle cx="50" cy="50" r="44" fill="none" stroke="var(--border)" stroke-width="7"/>
+              <circle cx="50" cy="50" r="44" fill="none" stroke="var(--accent)" stroke-width="7" stroke-linecap="round" stroke-dasharray="276" stroke-dashoffset="{{ scoreOffset }}"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:grid;place-items:center">
+              <div style="text-align:center"><div style="font-size:26px;font-weight:600;letter-spacing:-.03em">82</div><div style="font:400 9.5px/1 'JetBrains Mono',monospace;color:var(--ink3)">/100</div></div>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:11px">
+            <sc-for list="{{ scores }}" as="s" hint-placeholder-count="5">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:5px"><span style="color:var(--ink2)">{{ s.k }}</span><span style="font-weight:600">{{ s.v }}</span></div>
+                <div style="height:3px;border-radius:99px;background:var(--border);overflow:hidden"><div style="{{ s.bar }}"></div></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <button onClick="{{ applyFixes }}" style="width:100%;padding:11px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer" style-hover="opacity:.88">Aplicar melhorias</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ critique }}" as="c" hint-placeholder-count="3">
+          <div style="padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <span style="{{ c.dot }}"></span>
+              <span style="font-size:12.5px;font-weight:600">{{ c.label }}</span>
+            </div>
+            <sc-for list="{{ c.items }}" as="i" hint-placeholder-count="3">
+              <div style="display:flex;gap:9px;padding:6px 0;font-size:12.5px;line-height:1.55;color:var(--ink2)"><span style="color:var(--ink3)">—</span><span>{{ i }}</span></div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- refinamento -->
+    <sc-if value="{{ tabRef }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="padding:22px;background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:22px">
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">O que você gostaria de alterar?</label>
+        <textarea value="{{ refine }}" onChange="{{ setRefine }}" rows="3" placeholder="Ex: Deixe a peça mais premium e dê mais destaque ao CTA." style="width:100%;padding:13px;font-size:13.5px;line-height:1.55;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:11px;resize:vertical;outline:none"></textarea>
+        <div class="stack" style="display:flex;gap:8px;margin-top:14px">
+          <button onClick="{{ toast }}" style="padding:10px 16px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="opacity:.88">Aplicar alteração</button>
+          <button onClick="{{ toast }}" style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="border-color:var(--bstrong)">Gerar nova versão</button>
+          <button onClick="{{ toast }}" style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="border-color:var(--bstrong)">Gerar 4 variações</button>
+        </div>
+      </div>
+      <div class="g2" style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:22px">
+        <div>
+          <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:12px">HISTÓRICO</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <sc-for list="{{ versions }}" as="v" hint-placeholder-count="4">
+              <button onClick="{{ v.pick }}" style="{{ v.style }}">
+                <span style="font:600 11px/1 'JetBrains Mono',monospace">{{ v.id }}</span>
+                <span style="flex:1;text-align:left;font-size:11.5px">{{ v.note }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+            <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3)">COMPARAÇÃO</span>
+            <span style="font-size:11.5px;color:var(--ink3)">V3 → V4 · CTA em destaque, mais respiro</span>
+          </div>
+          <div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <sc-for list="{{ compare }}" as="c" hint-placeholder-count="2">
+              <div>
+                <div style="{{ c.canvas }}">
+                  <span style="font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:rgba(255,255,255,.7)">SIMPLISOFT</span>
+                  <span style="display:block">
+                    <span style="display:block;font-size:22px;font-weight:600;line-height:1.15;color:#fff">Sua empresa não pode parar.</span>
+                    <span style="{{ c.ctaStyle }}">Fale com a Simplisoft</span>
+                  </span>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:9px;font-size:11.5px"><span style="font-weight:600">{{ c.id }}</span><span style="color:var(--ink3)">{{ c.score }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <!-- ══ PROJETOS / CAMPANHAS ══ -->
+  <sc-if value="{{ isProj }}" hint-placeholder-val="{{ false }}">
+  <div class="fu" style="max-width:1180px;margin:0 auto">
+    <div class="stack" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:24px">
+      <div>
+        <h1 style="margin:0;font-size:29px;font-weight:600;letter-spacing:-.03em">{{ projTitle }}</h1>
+        <p style="margin:7px 0 0;font-size:13px;color:var(--ink3)">{{ projSub }}</p>
+      </div>
+      <button onClick="{{ goCriar }}" style="padding:10px 16px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="opacity:.88">+ Nova criação</button>
+    </div>
+    <div class="stack" style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+      <div style="display:flex;gap:5px">
+        <sc-for list="{{ projFilters }}" as="f" hint-placeholder-count="4">
+          <button onClick="{{ f.pick }}" style="{{ f.style }}">{{ f.label }}</button>
+        </sc-for>
+      </div>
+      <div style="flex:1"></div>
+      <div style="font:400 11px/1 'JetBrains Mono',monospace;color:var(--ink3)">{{ projCount }}</div>
+    </div>
+    <div class="g3" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
+      <sc-for list="{{ projList }}" as="p" hint-placeholder-count="6">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden" style-hover="border-color:var(--bstrong)">
+          <button onClick="{{ p.open }}" style="display:block;width:100%;border:none;padding:0;cursor:pointer;background:none">
+            <span style="{{ p.canvas }}">
+              <span style="font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:rgba(255,255,255,.7)">{{ p.brand }}</span>
+              <span style="display:block;font-size:17px;font-weight:600;line-height:1.2;color:#fff">{{ p.tag }}</span>
+            </span>
+          </button>
+          <div style="padding:14px 15px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="flex:1;font-size:13px;font-weight:600">{{ p.name }}</span>
+              <span style="{{ p.badge }}">{{ p.status }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:9px;font:400 10.5px/1 'JetBrains Mono',monospace;color:var(--ink3)">
+              <span>{{ p.type }}</span><span>·</span><span>{{ p.date }}</span><span style="margin-left:auto">{{ p.versions }}</span>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ══ BIBLIOTECA ══ -->
+  <sc-if value="{{ isLib }}" hint-placeholder-val="{{ false }}">
+  <div class="fu" style="max-width:1180px;margin:0 auto">
+    <h1 style="margin:0 0 7px;font-size:29px;font-weight:600;letter-spacing:-.03em">Biblioteca</h1>
+    <p style="margin:0 0 24px;font-size:13px;color:var(--ink3)">Tudo que o estúdio já produziu — reutilize, versione, favorite.</p>
+    <div class="stack" style="display:flex;gap:10px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;max-width:360px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+        <input placeholder="Buscar por tag, marca, prompt…" style="flex:1;border:none;background:none;outline:none;font-size:12.5px;color:var(--ink)">
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        <sc-for list="{{ libFilters }}" as="f" hint-placeholder-count="6">
+          <button onClick="{{ f.pick }}" style="{{ f.style }}">{{ f.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div class="g4" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px">
+      <sc-for list="{{ libItems }}" as="i" hint-placeholder-count="8">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden" style-hover="border-color:var(--bstrong)">
+          <div style="{{ i.canvas }}">{{ i.preview }}</div>
+          <div style="padding:12px">
+            <div style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.name }}</div>
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+              <sc-for list="{{ i.tags }}" as="t" hint-placeholder-count="2">
+                <span style="padding:3px 7px;font:400 9.5px/1.3 'JetBrains Mono',monospace;color:var(--ink3);border:1px solid var(--border);border-radius:5px">{{ t }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ══ MARCAS ══ -->
+  <sc-if value="{{ isBrand }}" hint-placeholder-val="{{ false }}">
+  <div class="fu" style="max-width:1180px;margin:0 auto">
+    <div class="stack" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:24px">
+      <div>
+        <h1 style="margin:0;font-size:29px;font-weight:600;letter-spacing:-.03em">Marcas</h1>
+        <p style="margin:7px 0 0;font-size:13px;color:var(--ink3)">Brand kits que alimentam todos os agentes.</p>
+      </div>
+      <button onClick="{{ toast }}" style="padding:10px 16px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="opacity:.88">+ Nova marca</button>
+    </div>
+    <div class="g2" style="display:grid;grid-template-columns:220px minmax(0,1fr);gap:22px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ brands }}" as="b" hint-placeholder-count="3">
+          <button onClick="{{ b.pick }}" style="{{ b.style }}">
+            <span style="{{ b.mark }}">{{ b.initial }}</span>
+            <span style="flex:1;text-align:left"><span style="display:block;font-size:12.5px;font-weight:600;color:var(--ink)">{{ b.name }}</span><span style="display:block;font-size:10.5px;color:var(--ink3)">{{ b.sector }}</span></span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px">
+        <div class="stack" style="display:flex;align-items:center;gap:16px;padding-bottom:22px;border-bottom:1px solid var(--border)">
+          <div style="width:52px;height:52px;border-radius:14px;background:#0F3B63;color:#fff;display:grid;place-items:center;font-size:19px;font-weight:700">S</div>
+          <div style="flex:1">
+            <div style="font-size:19px;font-weight:600;letter-spacing:-.02em">Simplisoft</div>
+            <div style="font-size:12px;color:var(--ink3);margin-top:3px">Telecom & TI para empresas · Feira de Santana, BA</div>
+          </div>
+          <button onClick="{{ toast }}" style="padding:9px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="border-color:var(--bstrong)">Editar marca</button>
+        </div>
+        <div class="g2" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;padding-top:22px">
+          <div>
+            <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:12px">CORES</div>
+            <div style="display:flex;gap:8px;margin-bottom:24px">
+              <sc-for list="{{ brandColors }}" as="c" hint-placeholder-count="4">
+                <div style="flex:1"><div style="{{ c.swatch }}"></div><div style="margin-top:6px;font:400 9.5px/1 'JetBrains Mono',monospace;color:var(--ink3)">{{ c.hex }}</div></div>
+              </sc-for>
+            </div>
+            <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:10px">TIPOGRAFIA</div>
+            <div style="padding:14px;background:var(--surface2);border-radius:11px;margin-bottom:24px">
+              <div style="font-size:20px;font-weight:600;letter-spacing:-.02em">Instrument Sans</div>
+              <div style="font-size:11.5px;color:var(--ink3);margin-top:4px">Títulos 600 · Corpo 400 · Números mono</div>
+            </div>
+            <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:10px">TOM DE VOZ</div>
+            <p style="margin:0;font-size:13px;line-height:1.6;color:var(--ink2)">Direto, técnico sem jargão, confiável. Fala com o dono do negócio: menos adjetivo, mais consequência prática.</p>
+          </div>
+          <div>
+            <sc-for list="{{ brandFields }}" as="f" hint-placeholder-count="5">
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:var(--ink3);margin-bottom:7px">{{ f.k }}</div>
+                <div style="font-size:12.5px;line-height:1.55;color:var(--ink)">{{ f.v }}</div>
+              </div>
+            </sc-for>
+            <div style="padding-top:16px">
+              <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:var(--ink3);margin-bottom:9px">PALAVRAS PROIBIDAS</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ banned }}" as="w" hint-placeholder-count="4">
+                  <span style="padding:4px 9px;font-size:11.5px;color:var(--err);border:1px solid var(--border);border-radius:6px">{{ w }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ══ AGENTES ══ -->
+  <sc-if value="{{ isAgents }}" hint-placeholder-val="{{ false }}">
+  <div class="fu" style="max-width:1180px;margin:0 auto">
+    <div class="stack" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:26px">
+      <div>
+        <h1 style="margin:0;font-size:29px;font-weight:600;letter-spacing:-.03em">Agentes de IA</h1>
+        <p style="margin:7px 0 0;font-size:13px;color:var(--ink3)">A equipe do estúdio. Crie, edite ou pause agentes por nicho de atuação.</p>
+      </div>
+      <button onClick="{{ newAgent }}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="opacity:.88">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Novo agente
+      </button>
+    </div>
+    <div class="g3" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px">
+      <sc-for list="{{ agents }}" as="a" hint-placeholder-count="6">
+        <div style="padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <span style="{{ a.mark }}">{{ a.initials }}</span>
+            <span style="flex:1;min-width:0">
+              <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:13.5px;font-weight:600">{{ a.name }}</span><span style="{{ a.badge }}">{{ a.status }}</span></span>
+              <span style="display:block;margin-top:5px;font-size:12px;line-height:1.5;color:var(--ink3)">{{ a.desc }}</span>
+            </span>
+            <button onClick="{{ a.toggle }}" style="{{ a.switchStyle }}"><span style="{{ a.knobStyle }}"></span></button>
+          </div>
+          <div style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:3px 9px;border-radius:99px;background:var(--asoft);color:var(--accent);font:600 9.5px/1.4 'JetBrains Mono',monospace;letter-spacing:.06em">{{ a.niche }}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+            <span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:var(--ink3)">MODELO <span style="color:var(--ink)">{{ a.model }}</span></span>
+            <span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:var(--ink3)">TEMP <span style="color:var(--ink)">{{ a.temp }}</span></span>
+            <span style="font:400 10.5px/1.4 'JetBrains Mono',monospace;color:var(--ink3)">EXECUÇÕES <span style="color:var(--ink)">{{ a.runs }}</span></span>
+          </div>
+          <div style="margin-top:14px;padding:12px;background:var(--surface2);border-radius:10px">
+            <div style="font:600 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:var(--ink3);margin-bottom:7px">PROMPT DE SISTEMA</div>
+            <div style="font:400 11px/1.6 'JetBrains Mono',monospace;color:var(--ink2)">{{ a.prompt }}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:12px">
+            <div style="display:flex;flex-wrap:wrap;gap:6px;flex:1">
+              <sc-for list="{{ a.tools }}" as="t" hint-placeholder-count="2">
+                <span style="padding:4px 9px;font-size:11px;color:var(--ink2);border:1px solid var(--border);border-radius:6px">{{ t }}</span>
+              </sc-for>
+            </div>
+            <button onClick="{{ a.edit }}" style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;font-size:11.5px;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap" style-hover="border-color:var(--bstrong)">Editar</button>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ══ INTEGRAÇÕES ══ -->
+  <sc-if value="{{ isInteg }}" hint-placeholder-val="{{ false }}">
+  <div class="fu" style="max-width:960px;margin:0 auto">
+    <div class="stack" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:26px">
+      <div>
+        <h1 style="margin:0;font-size:29px;font-weight:600;letter-spacing:-.03em">Integrações</h1>
+        <p style="margin:7px 0 0;font-size:13px;color:var(--ink3)">Provedores conectados ao workspace. Modelo e endpoint são livres — inclua qualquer API compatível.</p>
+      </div>
+      <button onClick="{{ newInteg }}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="opacity:.88">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Adicionar provedor
+      </button>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:16px;background:var(--surface);overflow:hidden">
+      <sc-for list="{{ integrations }}" as="i" hint-placeholder-count="6">
+        <div class="stack" style="display:flex;align-items:center;gap:16px;padding:17px 20px;border-bottom:1px solid var(--border)">
+          <span style="{{ i.mark }}">{{ i.initial }}</span>
+          <span style="flex:1;min-width:160px">
+            <span style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;font-weight:600">{{ i.name }}</span><span style="{{ i.badge }}">{{ i.status }}</span></span>
+            <span style="display:block;margin-top:4px;font:400 10.5px/1.4 'JetBrains Mono',monospace;color:var(--ink3)">{{ i.model }} · {{ i.key }}</span>
+          </span>
+          <span style="width:150px">
+            <span style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink3);margin-bottom:5px"><span>consumo</span><span>{{ i.usage }}</span></span>
+            <span style="display:block;height:3px;border-radius:99px;background:var(--border);overflow:hidden"><span style="{{ i.bar }}"></span></span>
+          </span>
+          <button onClick="{{ i.edit }}" style="padding:8px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;font-size:11.5px;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap" style-hover="border-color:var(--bstrong)">Editar</button>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ══ CONFIGURAÇÕES ══ -->
+  <sc-if value="{{ isCfg }}" hint-placeholder-val="{{ false }}">
+  <div class="fu" style="max-width:1000px;margin:0 auto">
+    <h1 style="margin:0 0 26px;font-size:29px;font-weight:600;letter-spacing:-.03em">Configurações</h1>
+    <div class="g2" style="display:grid;grid-template-columns:196px minmax(0,1fr);gap:26px">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <sc-for list="{{ cfgTabs }}" as="t" hint-placeholder-count="9">
+          <button onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+        </sc-for>
+      </div>
+      <div>
+        <div style="padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:16px">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">{{ cfgTitle }}</div>
+          <div style="font-size:12.5px;color:var(--ink3);margin-bottom:22px">{{ cfgSub }}</div>
+          <sc-for list="{{ cfgRows }}" as="r" hint-placeholder-count="5">
+            <div class="stack" style="display:flex;align-items:center;gap:16px;padding:14px 0;border-top:1px solid var(--border)">
+              <span style="flex:1"><span style="display:block;font-size:12.5px;font-weight:600">{{ r.k }}</span><span style="display:block;margin-top:3px;font-size:11.5px;color:var(--ink3)">{{ r.hint }}</span></span>
+              <span style="font-size:12.5px;color:var(--ink2);font-family:'JetBrains Mono',monospace">{{ r.v }}</span>
+              <button onClick="{{ toast }}" style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11.5px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="border-color:var(--bstrong)">{{ r.action }}</button>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  </div>
+</main>
+
+<!-- ══ DRAWER: detalhes da criação ══ -->
+<sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:60;display:flex;justify-content:flex-end">
+  <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(10,10,8,.34);backdrop-filter:blur(2px)"></div>
+  <aside class="fu" style="position:relative;width:420px;max-width:92vw;height:100%;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:22px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div style="flex:1"><div style="font-size:15px;font-weight:600">Detalhes da criação</div><div style="font:400 10.5px/1 'JetBrains Mono',monospace;color:var(--ink3);margin-top:5px">{{ sel.name }} · {{ sel.version }}</div></div>
+      <button onClick="{{ closeDrawer }}" style="width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:none;cursor:pointer;color:var(--ink2)" style-hover="border-color:var(--bstrong)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div style="{{ sel.canvas }}">
+      <span style="font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:rgba(255,255,255,.7)">SIMPLISOFT</span>
+      <span style="display:block">
+        <span style="display:block;font-size:24px;font-weight:600;line-height:1.15;color:#fff">{{ sel.headline }}</span>
+        <span style="display:inline-block;margin-top:14px;padding:8px 13px;border-radius:8px;background:#fff;color:#101210;font-size:11px;font-weight:600">{{ sel.cta }}</span>
+      </span>
+    </div>
+    <sc-for list="{{ sel.rows }}" as="r" hint-placeholder-count="6">
+      <div style="display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--border)">
+        <span style="width:92px;flex:0 0 92px;font:600 10px/1.4 'JetBrains Mono',monospace;letter-spacing:.08em;color:var(--ink3)">{{ r.k }}</span>
+        <span style="flex:1;font-size:12.5px;line-height:1.55;color:var(--ink)">{{ r.v }}</span>
+      </div>
+    </sc-for>
+    <div style="display:flex;gap:8px;margin-top:22px">
+      <button onClick="{{ toast }}" style="flex:1;padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="border-color:var(--bstrong)">Editar</button>
+      <button onClick="{{ regen }}" style="flex:1;padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="border-color:var(--bstrong)">Regenerar</button>
+      <button onClick="{{ toast }}" style="flex:1.2;padding:11px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="opacity:.88">Usar como final</button>
+    </div>
+  </aside>
+</div>
+</sc-if>
+
+<!-- ══ EDITOR DE AGENTE ══ -->
+<sc-if value="{{ agentEditorOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:65;display:flex;justify-content:flex-end">
+  <div onClick="{{ closeEditor }}" style="position:absolute;inset:0;background:rgba(10,10,8,.34);backdrop-filter:blur(2px)"></div>
+  <aside class="fu" style="position:relative;width:520px;max-width:94vw;height:100%;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:24px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
+      <span style="width:36px;height:36px;flex:0 0 36px;border-radius:10px;display:grid;place-items:center;font:600 12px/1 'JetBrains Mono',monospace;background:var(--asoft);color:var(--accent)">{{ dInitials }}</span>
+      <div style="flex:1"><div style="font-size:16px;font-weight:600">{{ agentEditorTitle }}</div><div style="font:400 10.5px/1 'JetBrains Mono',monospace;color:var(--ink3);margin-top:4px">AGENTE DE IA · WORKSPACE SIMPLISOFT</div></div>
+      <button onClick="{{ closeEditor }}" style="width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:none;cursor:pointer;color:var(--ink2)" style-hover="border-color:var(--bstrong)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <sc-if value="{{ agentIsNew }}" hint-placeholder-val="{{ false }}">
+      <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:10px">COMEÇAR DE UM TEMPLATE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px">
+        <sc-for list="{{ agentTemplates }}" as="t" hint-placeholder-count="6">
+          <button onClick="{{ t.apply }}" style="{{ t.style }}" style-hover="border-color:var(--bstrong)">
+            <span style="font-size:12.5px;font-weight:600;color:var(--ink)">{{ t.name }}</span>
+            <span style="font:400 9px/1.3 'JetBrains Mono',monospace;letter-spacing:.04em;color:var(--accent)">{{ t.niche }}</span>
+            <span style="font-size:11px;line-height:1.45;color:var(--ink3)">{{ t.desc }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">Nome do agente</div>
+        <input value="{{ dName }}" onChange="{{ setDName }}" placeholder="Ex: Gerente de Projetos" style="width:100%;padding:10px 12px;font-size:13px;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:10px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">Descrição</div>
+        <input value="{{ dDesc }}" onChange="{{ setDDesc }}" placeholder="O que este agente faz" style="width:100%;padding:10px 12px;font-size:13px;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:10px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:9px">Nicho de atuação</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ agentNiches }}" as="n" hint-placeholder-count="4"><button onClick="{{ n.pick }}" style="{{ n.style }}">{{ n.label }}</button></sc-for>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:9px">Modelo</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ agentModels }}" as="m" hint-placeholder-count="6"><button onClick="{{ m.pick }}" style="{{ m.style }}">{{ m.label }}</button></sc-for>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">Temperatura <span style="font:400 10px/1 'JetBrains Mono',monospace;color:var(--ink3)">0 = preciso · 1 = criativo</span></div>
+        <input value="{{ dTemp }}" onChange="{{ setDTemp }}" placeholder="0.5" style="width:100px;padding:10px 12px;font:500 13px/1 'JetBrains Mono',monospace;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:10px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">Prompt de sistema</div>
+        <textarea value="{{ dPrompt }}" onChange="{{ setDPrompt }}" rows="4" placeholder="Instrução que define o comportamento do agente…" style="width:100%;padding:12px;font:400 12px/1.6 'JetBrains Mono',monospace;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:11px;resize:vertical;outline:none"></textarea>
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:9px">Ferramentas & contexto</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ agentToolOpts }}" as="t" hint-placeholder-count="8"><button onClick="{{ t.toggle }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack" style="display:flex;align-items:center;gap:8px;margin-top:26px;padding-top:18px;border-top:1px solid var(--border)">
+      <button onClick="{{ deleteAgent }}" style="padding:11px 15px;background:none;border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--err);cursor:pointer" style-hover="border-color:var(--err)">Excluir</button>
+      <div style="flex:1"></div>
+      <button onClick="{{ closeEditor }}" style="padding:11px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="border-color:var(--bstrong)">Cancelar</button>
+      <button onClick="{{ saveAgent }}" style="padding:11px 18px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="opacity:.88">Salvar agente</button>
+    </div>
+  </aside>
+</div>
+</sc-if>
+
+<!-- ══ EDITOR DE INTEGRAÇÃO ══ -->
+<sc-if value="{{ integEditorOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:65;display:flex;justify-content:flex-end">
+  <div onClick="{{ closeEditor }}" style="position:absolute;inset:0;background:rgba(10,10,8,.34);backdrop-filter:blur(2px)"></div>
+  <aside class="fu" style="position:relative;width:480px;max-width:94vw;height:100%;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:24px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
+      <div style="flex:1"><div style="font-size:16px;font-weight:600">{{ integEditorTitle }}</div><div style="font:400 10.5px/1 'JetBrains Mono',monospace;color:var(--ink3);margin-top:4px">PROVEDOR DE IA · ENDPOINT LIVRE</div></div>
+      <button onClick="{{ closeEditor }}" style="width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:none;cursor:pointer;color:var(--ink2)" style-hover="border-color:var(--bstrong)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <sc-if value="{{ integIsNew }}" hint-placeholder-val="{{ false }}">
+      <div style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--ink3);margin-bottom:10px">PRESET DE PROVEDOR</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px">
+        <sc-for list="{{ providerPresets }}" as="p" hint-placeholder-count="6"><button onClick="{{ p.apply }}" style="{{ p.style }}">{{ p.label }}</button></sc-for>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">Provedor</div>
+        <input value="{{ iName }}" onChange="{{ setIName }}" placeholder="Ex: DeepSeek" style="width:100%;padding:10px 12px;font-size:13px;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:10px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">Modelo(s) <span style="font:400 10px/1 'JetBrains Mono',monospace;color:var(--ink3)">livre</span></div>
+        <input value="{{ iModel }}" onChange="{{ setIModel }}" placeholder="Ex: DeepSeek V3 · R1" style="width:100%;padding:10px 12px;font-size:13px;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:10px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">Endpoint / Base URL</div>
+        <input value="{{ iEndpoint }}" onChange="{{ setIEndpoint }}" placeholder="Ex: api.deepseek.com/v1" style="width:100%;padding:10px 12px;font:500 12.5px/1 'JetBrains Mono',monospace;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:10px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">Chave de API</div>
+        <input value="{{ iKey }}" onChange="{{ setIKey }}" type="password" placeholder="sk-…" style="width:100%;padding:10px 12px;font:500 12.5px/1 'JetBrains Mono',monospace;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:10px;outline:none">
+        <div style="margin-top:7px;font-size:11px;color:var(--ink3)">Armazenada com criptografia. Exibida sempre mascarada após salvar.</div>
+      </div>
+    </div>
+
+    <div class="stack" style="display:flex;align-items:center;gap:8px;margin-top:26px;padding-top:18px;border-top:1px solid var(--border)">
+      <button onClick="{{ deleteInteg }}" style="padding:11px 15px;background:none;border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--err);cursor:pointer" style-hover="border-color:var(--err)">Remover</button>
+      <div style="flex:1"></div>
+      <button onClick="{{ closeEditor }}" style="padding:11px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="border-color:var(--bstrong)">Cancelar</button>
+      <button onClick="{{ saveInteg }}" style="padding:11px 18px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="opacity:.88">Salvar</button>
+    </div>
+  </aside>
+</div>
+</sc-if>
+
+<!-- ══ COMMAND MENU ══ -->
+<sc-if value="{{ cmdOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:70;display:flex;justify-content:center;padding-top:14vh">
+  <div onClick="{{ closeCmd }}" style="position:absolute;inset:0;background:rgba(10,10,8,.34);backdrop-filter:blur(2px)"></div>
+  <div class="fu" style="position:relative;width:520px;max-width:92vw;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 24px 60px -20px rgba(0,0,0,.4);overflow:hidden;height:fit-content">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+      <input autofocus placeholder="Ir para, criar ou buscar…" style="flex:1;border:none;background:none;outline:none;font-size:14px;color:var(--ink)">
+      <span style="font:500 10px/1 'JetBrains Mono',monospace;padding:3px 5px;border:1px solid var(--border);border-radius:5px;color:var(--ink3)">ESC</span>
+    </div>
+    <div style="padding:8px">
+      <sc-for list="{{ cmdItems }}" as="c" hint-placeholder-count="6">
+        <button onClick="{{ c.run }}" style="display:flex;align-items:center;gap:11px;width:100%;padding:10px 11px;background:none;border:none;border-radius:9px;cursor:pointer;text-align:left" style-hover="background:var(--surface2)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.7" stroke-linecap="round"><path d="{{ c.icon }}"/></svg>
+          <span style="flex:1;font-size:13px;color:var(--ink)">{{ c.label }}</span>
+          <span style="font:400 10px/1 'JetBrains Mono',monospace;color:var(--ink3)">{{ c.kind }}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ══ TOAST ══ -->
+<sc-if value="{{ toastMsg }}" hint-placeholder-val="{{ false }}">
+<div class="fu" style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:11px;padding:12px 16px;background:var(--ink);color:var(--surface);border-radius:12px;box-shadow:0 16px 40px -16px rgba(0,0,0,.5)">
+  <span style="width:16px;height:16px;border-radius:99px;border:1.5px solid currentColor;display:grid;place-items:center;font-size:9px">✓</span>
+  <span style="font-size:12.5px;font-weight:500">{{ toastMsg }}</span>
+</div>
+</sc-if>
+
+<!-- ══ MOBILE NAV ══ -->
+<nav class="mb" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;padding:8px 10px 12px;background:color-mix(in oklab,var(--surface) 92%,transparent);backdrop-filter:blur(14px);border-top:1px solid var(--border);justify-content:space-around">
+  <sc-for list="{{ navMobile }}" as="n" hint-placeholder-count="5">
+    <button onClick="{{ n.go }}" style="{{ n.style }}">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"/></svg>
+      <span style="font-size:10px;font-weight:500">{{ n.label }}</span>
+    </button>
+  </sc-for>
+</nav>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:940}}">
+const I = {
+  dash:"M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 8h6V4h-6z",
+  spark:"M12 3.5l2.1 5.4 5.4 2.1-5.4 2.1L12 18.5l-2.1-5.4L4.5 11l5.4-2.1z",
+  folder:"M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z",
+  megaphone:"M4 10v4l10 4V6zM14 8h3a4 4 0 010 8h-3",
+  library:"M4 5h4v14H4zM10 5h4v14h-4zM17 6l3 12",
+  brand:"M12 3l8 4.5v9L12 21l-8-4.5v-9z",
+  template:"M4 5h16v4H4zM4 13h7v6H4zM13 13h7v6h-7z",
+  agents:"M12 4a4 4 0 100 8 4 4 0 000-8M5 20a7 7 0 0114 0",
+  plug:"M9 3v6M15 3v6M6 9h12v3a6 6 0 01-12 0zM12 18v3",
+  cog:"M12 9a3 3 0 100 6 3 3 0 000-6M19 12a7 7 0 00-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 00-2-1.2L14.2 3H9.8l-.4 2.7a7 7 0 00-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 002 1.2l.4 2.7h4.4l.4-2.7a7 7 0 002-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z",
+  image:"M3 5h18v14H3zM3 15l5-4 4 3 3-3 6 5",
+  story:"M7 3h10v18H7zM10 12h4",
+  carousel:"M8 5h8v14H8zM4 8v8M20 8v8",
+  ad:"M4 6h16v9H4zM9 19h6M12 15v4",
+  banner:"M3 8h18v8H3z",
+  chat:"M4 5h16v10H9l-5 4z",
+  custom:"M12 4v16M4 12h16",
+  eye:"M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6M12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5",
+  star:"M12 4l2.4 5 5.6.6-4.2 3.8 1.2 5.6L12 16.2 7 19l1.2-5.6L4 9.6 9.6 9z",
+  refresh:"M20 11a8 8 0 10-2.6 6M20 5v6h-6",
+  download:"M12 4v11M7 11l5 5 5-5M5 20h14",
+  copy:"M9 9h11v11H9zM5 15V4h11",
+  sun:"M12 6.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19",
+  moon:"M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z",
+  chevD:"M6 9l6 6 6-6", chevR:"M9 6l6 6-6 6"
+};
+const NAV = [
+  ["dashboard","Dashboard",I.dash,""],["criar","Criar",I.spark,""],["projetos","Projetos",I.folder,"18"],
+  ["campanhas","Campanhas",I.megaphone,"6"],["biblioteca","Biblioteca",I.library,""],["marcas","Marcas",I.brand,"3"],
+  ["templates","Templates",I.template,""]
+];
+const NAV2 = [["agentes","Agentes de IA",I.agents],["integracoes","Integrações",I.plug],["config","Configurações",I.cog]];
+const MODELS = ["GPT-4o","GPT-4o mini","GPT Image","Claude Sonnet 4","Claude Opus 4","DeepSeek V3","DeepSeek R1","Gemini 2.5 Flash","Gemini 2.5 Pro","Llama 3.3 70B","Modelo personalizado…"];
+const AG_TOOLS = ["brand kit","tom de voz","palavras proibidas","paleta","referências","pesquisa interna","upscale","variações","rubrica","diff","checklist","cronograma","dependências","CRM","planilhas","web search"];
+const NICHES = [
+  {name:"Marketing & Conteúdo", desc:"Estratégia, copy, direção de arte e social."},
+  {name:"Gestão de Projetos", desc:"Planejamento, tarefas, prazos e status."},
+  {name:"Comercial & Vendas", desc:"Prospecção, propostas e follow-up."},
+  {name:"Jurídico", desc:"Revisão de contratos e conformidade."},
+  {name:"Suporte ao Cliente", desc:"Atendimento, triagem e base de conhecimento."},
+  {name:"Dados & Análise", desc:"Relatórios, métricas e insights."}
+];
+const AG_TEMPLATES = [
+  {niche:"Marketing & Conteúdo", name:"Social Media", desc:"Planeja calendário e escreve posts multi-canal.", model:"Claude Sonnet 4", tools:["tom de voz","brand kit"], prompt:"Monte um calendário editorial e escreva posts adaptados a cada canal, no tom da marca."},
+  {niche:"Gestão de Projetos", name:"Gerente de Projetos", desc:"Quebra objetivos em tarefas, prazos e responsáveis.", model:"DeepSeek V3", tools:["cronograma","dependências"], prompt:"Transforme o objetivo em plano de execução: marcos, tarefas, donos e datas realistas. Sinalize riscos e dependências."},
+  {niche:"Gestão de Projetos", name:"Scrum Master", desc:"Organiza sprints, backlog e cerimônias.", model:"GPT-4o", tools:["checklist","dependências"], prompt:"Priorize o backlog, componha a sprint e escreva pautas objetivas de daily, review e retro."},
+  {niche:"Comercial & Vendas", name:"SDR", desc:"Qualifica leads e escreve cadências de prospecção.", model:"GPT-4o", tools:["CRM","web search"], prompt:"Pesquise o lead, avalie fit e escreva uma cadência de e-mails curta e personalizada."},
+  {niche:"Jurídico", name:"Revisor de Contratos", desc:"Aponta cláusulas de risco e sugere ajustes.", model:"Claude Opus 4", tools:["checklist","diff"], prompt:"Revise o contrato, destaque cláusulas de risco e proponha redações alternativas conservadoras."},
+  {niche:"Suporte ao Cliente", name:"Agente de Suporte", desc:"Responde tickets e alimenta a base de conhecimento.", model:"DeepSeek V3", tools:["checklist","brand kit"], prompt:"Responda ao ticket de forma empática e objetiva; sugira artigo de base de conhecimento quando faltar."},
+  {niche:"Dados & Análise", name:"Analista de Dados", desc:"Lê planilhas e gera relatórios com insights.", model:"GPT-4o", tools:["planilhas","web search"], prompt:"Resuma os dados em métricas-chave, tendências e 3 recomendações acionáveis."},
+  {niche:"Marketing & Conteúdo", name:"Agente em branco", desc:"Comece do zero e defina tudo manualmente.", model:"GPT-4o", tools:[], prompt:""}
+];
+const PROVIDERS = [
+  {name:"OpenAI", model:"GPT-4o · GPT Image", endpoint:"api.openai.com/v1"},
+  {name:"Anthropic", model:"Claude Sonnet 4", endpoint:"api.anthropic.com/v1"},
+  {name:"DeepSeek", model:"DeepSeek V3 · R1", endpoint:"api.deepseek.com/v1"},
+  {name:"Google AI", model:"Gemini 2.5 Flash", endpoint:"generativelanguage.googleapis.com"},
+  {name:"Mistral", model:"Mistral Large", endpoint:"api.mistral.ai/v1"},
+  {name:"Groq", model:"Llama 3.3 70B", endpoint:"api.groq.com/openai/v1"},
+  {name:"OpenRouter", model:"Multi-modelo", endpoint:"openrouter.ai/api/v1"},
+  {name:"Personalizado", model:"", endpoint:""}
+];
+const STEPS = [
+  ["01","Estratégia","Público, ângulo e proposta de valor definidos","GPT-4o","1.240","6.2s"],
+  ["02","Copy","Headline, subtítulo, CTA e legenda escritos","Claude Sonnet","2.980","11.4s"],
+  ["03","Direção criativa","Paleta, composição, luz e enquadramento","Claude Sonnet","1.760","8.1s"],
+  ["04","Geração visual","Renderizando 4 variações em 1080 × 1080","GPT Image","—","38.5s"],
+  ["05","Avaliação","Nota de copy, hierarquia, contraste e marca","GPT-4o","—","—"],
+  ["06","Refinamento","Ajustes automáticos a partir da crítica","Claude Sonnet","—","—"],
+  ["07","Finalização","Empacotamento de arquivos e entrega","Sistema","—","—"]
+];
+const CANV = [
+  "linear-gradient(150deg,#0F3B63,#071A2C 70%)",
+  "linear-gradient(150deg,#17594E,#08211D 70%)",
+  "linear-gradient(150deg,#2B2B26,#0D0D0B 70%)",
+  "linear-gradient(150deg,#5B3A2E,#1C120D 70%)"
+];
+
+class Component extends DCLogic {
+  state = {
+    theme:"light", route:"dashboard", tab:"copy", cmdOpen:false, drawer:null, toastMsg:"",
+    tech:false, step:3, projFilter:"Todos", libFilter:"Tudo", cfgTab:"Perfil", version:"V4",
+    brief:"", refine:"", type:"Campanha completa", goal:"Gerar leads", tone:"Profissional",
+    fmt:"1080 × 1080", brandSel:"Simplisoft", audience:"Pequenas empresas · 5 a 50 funcionários",
+    favs:{2:true},
+    agentsList:[
+      {name:"Estratégia",initials:"EG",desc:"Define público, ângulo e proposta de valor a partir do briefing.",model:"GPT-4o",temp:"0.4",runs:"128",tools:["brand kit","pesquisa interna"],prompt:"Você é estrategista sênior. Traduza o briefing em ângulo único, dor central e prova.",niche:"Marketing & Conteúdo",off:false},
+      {name:"Copywriter",initials:"CW",desc:"Escreve headline, subtítulo, CTA e legenda no tom da marca.",model:"Claude Sonnet 4",temp:"0.7",runs:"214",tools:["tom de voz","palavras proibidas"],prompt:"Escreva copy curta e concreta. Nunca use as palavras proibidas do brand kit.",niche:"Marketing & Conteúdo",off:false},
+      {name:"Diretor de Arte",initials:"DA",desc:"Constrói paleta, composição, luz e enquadramento.",model:"Claude Sonnet 4",temp:"0.6",runs:"198",tools:["paleta","referências"],prompt:"Descreva direção de arte executável: composição, luz, lente, elementos.",niche:"Marketing & Conteúdo",off:false},
+      {name:"Gerador Visual",initials:"GV",desc:"Renderiza as peças nos formatos solicitados.",model:"GPT Image",temp:"—",runs:"642",tools:["upscale","variações"],prompt:"Gere a peça seguindo o prompt visual e reserve área de respiro para a headline.",niche:"Marketing & Conteúdo",off:false},
+      {name:"Crítico",initials:"CR",desc:"Avalia copy, hierarquia, contraste e aderência à marca.",model:"GPT-4o",temp:"0.2",runs:"187",tools:["rubrica","brand kit"],prompt:"Avalie de 0 a 100 por categoria e aponte problemas objetivos e acionáveis.",niche:"Marketing & Conteúdo",off:false},
+      {name:"Revisor",initials:"RV",desc:"Aplica correções e valida a entrega final.",model:"Claude Sonnet 4",temp:"0.3",runs:"156",tools:["diff","checklist"],prompt:"Aplique apenas as correções aprovadas e registre o diff entre versões.",niche:"Marketing & Conteúdo",off:false},
+      {name:"Gerente de Projetos",initials:"GP",desc:"Quebra a campanha em tarefas, prazos e responsáveis.",model:"DeepSeek V3",temp:"0.3",runs:"74",tools:["cronograma","dependências"],prompt:"Transforme o objetivo em plano de execução: marcos, tarefas, donos e datas realistas.",niche:"Gestão de Projetos",off:false}
+    ],
+    integList:[
+      {name:"OpenAI",initial:"O",model:"GPT-4o · GPT Image",endpoint:"api.openai.com/v1",key:"sk-••••••••3f9a",usagePct:68,statusKind:"ok",statusLabel:"CONECTADO"},
+      {name:"Anthropic",initial:"A",model:"Claude Sonnet 4",endpoint:"api.anthropic.com/v1",key:"sk-ant-••••••7c21",usagePct:41,statusKind:"ok",statusLabel:"CONECTADO"},
+      {name:"DeepSeek",initial:"D",model:"DeepSeek V3 · R1",endpoint:"api.deepseek.com/v1",key:"sk-••••••••1b7c",usagePct:23,statusKind:"ok",statusLabel:"CONECTADO"},
+      {name:"Google AI",initial:"G",model:"Gemini 2.5 Flash",endpoint:"generativelanguage.googleapis.com",key:"—",usagePct:0,statusKind:"wait",statusLabel:"NÃO CONFIGURADO"},
+      {name:"Canva",initial:"C",model:"Export de peças",endpoint:"oauth · workspace",key:"oauth",usagePct:12,statusKind:"ok",statusLabel:"CONECTADO"},
+      {name:"Storage",initial:"S",model:"S3 · media-studio",endpoint:"s3.amazonaws.com",key:"•••••••••bkt",usagePct:83,statusKind:"ok",statusLabel:"CONECTADO"}
+    ],
+    editAgent:null, editInteg:null, draft:{}
+  };
+  componentDidMount(){
+    document.addEventListener("keydown", this.onKey = e=>{
+      if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==="k"){ e.preventDefault(); this.setState({cmdOpen:!this.state.cmdOpen}); }
+      if(e.key==="Escape") this.setState({cmdOpen:false, drawer:null, editAgent:null, editInteg:null});
+    });
+  }
+  componentWillUnmount(){ document.removeEventListener("keydown", this.onKey); clearInterval(this.t); }
+  runFlow(){
+    clearInterval(this.t);
+    this.setState({route:"workflow", step:0});
+    this.t = setInterval(()=>{
+      const s = this.state.step;
+      if(s>=6){ clearInterval(this.t); this.setState({route:"resultado", tab:"copy"}); this.flash("Campanha pronta · 4 variações geradas"); }
+      else this.setState({step:s+1});
+    }, 1100);
+  }
+  flash(m){ this.setState({toastMsg:m}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toastMsg:""}),2400); }
+  go(r){ return ()=>this.setState({route:r, cmdOpen:false}); }
+  navStyle(id){
+    const on = this.state.route===id;
+    return "display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;border-radius:9px;font-size:12.5px;font-weight:"+(on?"600":"500")+";cursor:pointer;background:"+(on?"var(--asoft)":"none")+";color:"+(on?"var(--accent)":"var(--ink2)");
+  }
+  chip(on){
+    return "padding:7px 12px;font-size:12px;font-weight:"+(on?"600":"500")+";border-radius:9px;cursor:pointer;border:1px solid "+(on?"transparent":"var(--border)")+";background:"+(on?"var(--ink)":"var(--surface)")+";color:"+(on?"var(--surface)":"var(--ink2)");
+  }
+  badge(kind){
+    const map = {ok:["var(--ok)","Concluído"],run:["var(--accent)"],wait:["var(--ink3)"],warn:["var(--warn)"]};
+    const c = (map[kind]||map.wait)[0];
+    return "padding:4px 9px;border-radius:99px;font:600 9.5px/1.3 'JetBrains Mono',monospace;letter-spacing:.06em;color:"+c+";border:1px solid "+c+"33;background:"+c+"14;white-space:nowrap";
+  }
+  canvas(i, h){
+    return "display:flex;flex-direction:column;justify-content:space-between;width:100%;height:"+(h||"210px")+";padding:20px;background:"+CANV[i%4]+";border-radius:12px;text-align:left";
+  }
+  initialsFrom(n){ return (n||"").trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase()||"AG"; }
+  // ── Agentes CRUD ──
+  newAgent(){ this.setState({editAgent:"new", draft:{name:"",desc:"",model:MODELS[0],temp:"0.5",tools:[],prompt:"",niche:NICHES[0].name,off:false}}); }
+  editAgentAt(i){ this.setState({editAgent:i, draft:{...this.state.agentsList[i], tools:[...this.state.agentsList[i].tools]}}); }
+  applyTemplate(t){ this.setState({draft:{...this.state.draft, name:t.name, desc:t.desc, prompt:t.prompt, tools:[...t.tools], niche:t.niche, model:t.model||this.state.draft.model}}); }
+  saveAgent(){
+    const d=this.state.draft; if(!d.name||!d.name.trim()){ this.flash("Dê um nome ao agente"); return; }
+    const rec={...d, initials:this.initialsFrom(d.name), runs:d.runs||"0"};
+    const list=[...this.state.agentsList];
+    if(this.state.editAgent==="new"){ list.push(rec); this.flash("Agente “"+rec.name+"” criado"); }
+    else { list[this.state.editAgent]=rec; this.flash("Agente atualizado"); }
+    this.setState({agentsList:list, editAgent:null, draft:{}});
+  }
+  deleteAgent(){
+    if(this.state.editAgent==="new"){ this.setState({editAgent:null,draft:{}}); return; }
+    const list=this.state.agentsList.filter((_,x)=>x!==this.state.editAgent);
+    this.setState({agentsList:list, editAgent:null, draft:{}}); this.flash("Agente excluído");
+  }
+  // ── Integrações CRUD ──
+  newInteg(){ this.setState({editInteg:"new", draft:{name:"",model:"",endpoint:"",key:"",usagePct:0,statusKind:"wait",statusLabel:"NÃO CONFIGURADO"}}); }
+  editIntegAt(i){ this.setState({editInteg:i, draft:{...this.state.integList[i]}}); }
+  applyProvider(p){ this.setState({draft:{...this.state.draft, name:p.name, model:p.model, endpoint:p.endpoint}}); }
+  saveInteg(){
+    const d=this.state.draft; if(!d.name||!d.name.trim()){ this.flash("Informe o provedor"); return; }
+    const connected=!!(d.key&&d.key.trim()&&d.key!=="—");
+    const rec={...d, initial:this.initialsFrom(d.name)[0], statusKind:connected?"ok":"wait", statusLabel:connected?"CONECTADO":"NÃO CONFIGURADO"};
+    const list=[...this.state.integList];
+    if(this.state.editInteg==="new"){ list.push(rec); this.flash("Provedor “"+rec.name+"” adicionado"); }
+    else { list[this.state.editInteg]=rec; this.flash("Integração atualizada"); }
+    this.setState({integList:list, editInteg:null, draft:{}});
+  }
+  deleteInteg(){
+    if(this.state.editInteg==="new"){ this.setState({editInteg:null,draft:{}}); return; }
+    const list=this.state.integList.filter((_,x)=>x!==this.state.editInteg);
+    this.setState({integList:list, editInteg:null, draft:{}}); this.flash("Provedor removido");
+  }
+  setD(k){ return e=>this.setState({draft:{...this.state.draft, [k]:e.target.value}}); }
+  toggleTool(t){ const cur=this.state.draft.tools||[]; const has=cur.includes(t);
+    this.setState({draft:{...this.state.draft, tools: has?cur.filter(x=>x!==t):[...cur,t]}}); }
+
+  renderVals(){
+    const s = this.state, R = s.route, tab = s.tab, d = s.draft||{};
+    const mk = (id,label,icon,count)=>({id,label,icon,count,style:this.navStyle(id),go:this.go(id)});
+
+    const artes = [0,1,2,3].map(i=>({
+      name:"Variação 0"+(i+1), size:"1080 × 1080", fav:!!s.favs[i],
+      headline:["Sua empresa não pode parar.","Conexão que sustenta o crescimento.","Internet empresarial sem desculpas.","Estabilidade como padrão."][i],
+      cta:"Fale com a Simplisoft",
+      frame:"position:relative;display:block;width:100%;padding:0;border:1px solid var(--border);border-radius:14px;background:none;cursor:pointer;overflow:hidden",
+      canvas:this.canvas(i,"auto")+";aspect-ratio:1;border-radius:0",
+      open:()=>this.setState({drawer:i}),
+      actions:[
+        {title:"Ampliar",icon:I.eye,run:()=>this.setState({drawer:i})},
+        {title:"Favoritar",icon:I.star,run:()=>this.setState({favs:{...s.favs,[i]:!s.favs[i]}})},
+        {title:"Regenerar",icon:I.refresh,run:()=>this.flash("Regenerando variação 0"+(i+1)+"…")},
+        {title:"Baixar",icon:I.download,run:()=>this.flash("Download iniciado · PNG 1080 × 1080")},
+        {title:"Duplicar",icon:I.copy,run:()=>this.flash("Variação duplicada")}
+      ]
+    }));
+
+    const projAll = [
+      ["Campanha Internet Empresarial","Simplisoft","Campanha","07 set","Em andamento","run","v4","PME"],
+      ["Post Wi-Fi 6 para escritórios","Simplisoft","Post","05 set","Concluído","ok","v2","Wi-Fi 6"],
+      ["Story Suporte 24/7","Simplisoft","Story","04 set","Concluído","ok","v3","24/7"],
+      ["Anúncio Link Dedicado","Simplisoft","Anúncio","02 set","Concluído","ok","v5","Dedicado"],
+      ["Carrossel Migração de PABX","Nova Clínica","Carrossel","29 ago","Favorito","warn","v2","PABX"],
+      ["Banner Black Friday B2B","Simplisoft","Banner","24 ago","Concluído","ok","v6","BF B2B"]
+    ];
+    const filt = s.projFilter;
+    const projList = projAll.filter(p=>filt==="Todos"||(filt==="Em andamento"&&p[5]==="run")||(filt==="Concluídos"&&p[5]==="ok")||(filt==="Favoritos"&&p[5]==="warn"))
+      .map((p,i)=>({name:p[0],brand:p[1].toUpperCase(),type:p[2],date:p[3],status:p[4],versions:p[6],tag:p[7],
+        badge:this.badge(p[5]), canvas:this.canvas(i,"132px"), open:()=>this.setState({route:"resultado",tab:"copy"})}));
+
+    const sel = s.drawer==null?{}:{
+      name:artes[s.drawer].name, version:"v4", headline:artes[s.drawer].headline, cta:artes[s.drawer].cta,
+      canvas:this.canvas(s.drawer,"280px")+";margin-bottom:20px",
+      rows:[
+        {k:"CONCEITO",v:"Internet que acompanha o crescimento da sua empresa."},
+        {k:"PROMPT",v:"Escritório corporativo real, luz natural difusa lateral, mesa de reunião, servidor discreto ao fundo desfocado, paleta azul-petróleo, composição com respiro superior para headline."},
+        {k:"DIREÇÃO",v:"Fotografia documental corporativa · grão sutil · sem pessoas olhando para a câmera"},
+        {k:"MODELO",v:"GPT Image · qualidade alta"},
+        {k:"DIMENSÕES",v:"1080 × 1080 px · RGB"},
+        {k:"DATA",v:"07 set 2026 · 09:12"},
+        {k:"VERSÃO",v:"v4 (derivada de v3)"}
+      ]
+    };
+
+    return {
+      theme:s.theme, toggleTheme:()=>this.setState({theme:s.theme==="light"?"dark":"light"}),
+      themeIcon:s.theme==="light"?I.moon:I.sun,
+      navMain:NAV.map(n=>mk(n[0],n[1],n[2],n[3])),
+      navSys:NAV2.map(n=>mk(n[0],n[1],n[2],"")),
+      navMobile:["dashboard","criar","projetos","biblioteca","config"].map((id,i)=>{
+        const on=R===id;
+        return {id, label:["Início","Criar","Projetos","Biblioteca","Ajustes"][i], icon:[I.dash,I.spark,I.folder,I.library,I.cog][i], go:this.go(id),
+          style:"display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 12px;background:none;border:none;cursor:pointer;color:"+(on?"var(--accent)":"var(--ink3)")};
+      }),
+      credits:{used:"1.480", total:"5.000", barStyle:"height:100%;width:29.6%;background:var(--accent)"},
+      agentsActive:s.agentsList.filter(a=>!a.off).length,
+      openWorkspace:()=>this.flash("Workspace: Simplisoft · 3 marcas"),
+      openCmd:()=>this.setState({cmdOpen:true}), closeCmd:()=>this.setState({cmdOpen:false}),
+      toast:()=>this.flash("Ação registrada"), toastMsg:s.toastMsg,
+      goCriar:this.go("criar"), goProjetos:this.go("projetos"), goResultado:()=>this.setState({route:"resultado",tab:"copy"}),
+      isDash:R==="dashboard", isCriar:R==="criar", isFlow:R==="workflow", isRes:R==="resultado",
+      isProj:R==="projetos"||R==="campanhas"||R==="templates", isLib:R==="biblioteca", isBrand:R==="marcas",
+      isAgents:R==="agentes", isInteg:R==="integracoes", isCfg:R==="config",
+
+      stats:[
+        {label:"PROJETOS CRIADOS",value:"48",delta:"+6",note:"nos últimos 30 dias",deltaStyle:"font:600 11px/1 'JetBrains Mono',monospace;color:var(--ok)"},
+        {label:"CAMPANHAS ATIVAS",value:"6",delta:"2 na fila",note:"1 em geração agora",deltaStyle:"font-size:11px;color:var(--ink3);white-space:nowrap"},
+        {label:"ARTES GERADAS",value:"312",delta:"+34",note:"24 favoritadas",deltaStyle:"font:600 11px/1 'JetBrains Mono',monospace;color:var(--ok)"},
+        {label:"CRÉDITOS USADOS",value:"1.480",delta:"29,6%",note:"de 5.000 no ciclo",deltaStyle:"font-size:11px;color:var(--ink3);white-space:nowrap"}
+      ],
+      recents:projAll.slice(0,5).map((p,i)=>({
+        name:p[0], meta:p[2]+" · "+p[1]+" · "+p[3], status:p[4], versions:p[6], badge:this.badge(p[5]),
+        thumb:"width:44px;height:44px;flex:0 0 44px;border-radius:9px;background:"+CANV[i%4],
+        open:()=>this.setState({route:"resultado",tab:"copy"})
+      })),
+      quick:[
+        {label:"Post Instagram",spec:"1080 × 1080",icon:I.image},{label:"Story",spec:"1080 × 1920",icon:I.story},
+        {label:"Carrossel",spec:"ATÉ 10 SLIDES",icon:I.carousel},{label:"Campanha",spec:"MULTI-PEÇA",icon:I.megaphone},
+        {label:"Anúncio",spec:"META / GOOGLE",icon:I.ad},{label:"Banner",spec:"1200 × 628",icon:I.banner},
+        {label:"WhatsApp",spec:"STATUS / LISTA",icon:I.chat},{label:"Personalizado",spec:"LIVRE",icon:I.custom}
+      ],
+
+      brief:s.brief, setBrief:e=>this.setState({brief:e.target.value}),
+      briefHints:[
+        {label:"Divulgar internet empresarial para PMEs", apply:()=>this.setState({brief:"Crie uma campanha para divulgar nosso novo serviço de internet empresarial para pequenas empresas."})},
+        {label:"Lançar plano de link dedicado", apply:()=>this.setState({brief:"Campanha de lançamento do plano de link dedicado com SLA de 99,9%."})},
+        {label:"Promover suporte 24/7", apply:()=>this.setState({brief:"Post institucional destacando nosso suporte técnico 24/7 com atendimento local."})}
+      ],
+      fields:[
+        {label:"Tipo de conteúdo",hint:"OBRIGATÓRIO",isChips:true,options:["Post","Story","Carrossel","Anúncio","Banner","Campanha completa"].map(o=>({label:o,style:this.chip(s.type===o),pick:()=>this.setState({type:o})}))},
+        {label:"Objetivo",hint:"OBRIGATÓRIO",isChips:true,options:["Vender","Gerar leads","Divulgar","Engajar","Informar","Institucional"].map(o=>({label:o,style:this.chip(s.goal===o),pick:()=>this.setState({goal:o})}))},
+        {label:"Público",hint:"TEXTO LIVRE",isText:true,value:s.audience,placeholder:"Ex: donos de pequenas empresas",set:e=>this.setState({audience:e.target.value})},
+        {label:"Marca",hint:"BRAND KIT",isChips:true,options:["Simplisoft","Nova Clínica","Atlas Log"].map(o=>({label:o,style:this.chip(s.brandSel===o),pick:()=>this.setState({brandSel:o})}))},
+        {label:"Tom",hint:"VOZ",isChips:true,options:["Profissional","Informal","Premium","Institucional","Divertido","Inspirador"].map(o=>({label:o,style:this.chip(s.tone===o),pick:()=>this.setState({tone:o})}))},
+        {label:"Formato",hint:"SAÍDA",isChips:true,options:["1080 × 1080","1080 × 1920","1200 × 628","Personalizado"].map(o=>({label:o,style:this.chip(s.fmt===o),pick:()=>this.setState({fmt:o})}))},
+        {label:"CTA",hint:"OPCIONAL",isText:true,value:"Fale com a Simplisoft",placeholder:"Ex: Fale com um especialista",set:()=>{}}
+      ],
+      startWorkflow:()=>this.runFlow(),
+
+      steps:STEPS.map((st,i)=>{
+        const done=i<s.step, run=i===s.step;
+        return {
+          num:st[0], label:st[1], detail:st[2],
+          state:done?"Concluído":run?"Em andamento":"Aguardando",
+          mark:done?"✓":run?"":"",
+          dot:"width:26px;height:26px;flex:0 0 26px;border-radius:99px;display:grid;place-items:center;font-size:11px;font-weight:700;"+
+            (done?"background:var(--asoft);color:var(--accent);border:1px solid transparent"
+             :run?"border:2px solid var(--accent);border-top-color:transparent;animation:spin 1s linear infinite;color:transparent"
+             :"border:1px solid var(--bstrong);color:var(--ink3)"),
+          titleStyle:"font-size:13.5px;font-weight:600;color:"+(done||run?"var(--ink)":"var(--ink3)"),
+          stateStyle:this.badge(done?"ok":run?"run":"wait"),
+          showTech:s.tech,
+          tech:[{k:"AGENTE",v:st[3]},{k:"TOKENS",v:st[4]},{k:"TEMPO",v:st[5]},{k:"CUSTO",v:done?"US$ 0,0"+(2+i):"—"}]
+        };
+      }),
+      flowBar:"height:100%;width:"+Math.round((s.step/7)*100)+"%;background:var(--accent);transition:width .6s cubic-bezier(.2,.8,.2,1)",
+      toggleTech:()=>this.setState({tech:!s.tech}),
+      techLabel:s.tech?"Ocultar detalhes técnicos":"Ver detalhes técnicos",
+      techIcon:s.tech?I.chevD:I.chevR,
+
+      resTabs:[["copy","Copy & estratégia"],["artes","Artes geradas"],["dir","Direção criativa"],["crit","Análise da peça"],["ref","Refinamento"]].map(t=>{
+        const on=tab===t[0];
+        return {label:t[1], pick:()=>this.setState({tab:t[0]}),
+          style:"padding:11px 14px;background:none;border:none;border-bottom:2px solid "+(on?"var(--ink)":"transparent")+";font-size:13px;font-weight:"+(on?"600":"500")+";color:"+(on?"var(--ink)":"var(--ink3)")+";cursor:pointer;margin-bottom:-1px;white-space:nowrap"};
+      }),
+      tabCopy:tab==="copy", tabArtes:tab==="artes", tabDir:tab==="dir", tabCrit:tab==="crit", tabRef:tab==="ref",
+      copyBlocks:[
+        {label:"CONCEITO",text:"Internet que acompanha o crescimento da sua empresa.",textStyle:"font-family:'Instrument Serif',serif;font-size:25px;line-height:1.3;color:var(--ink)"},
+        {label:"HEADLINE",text:"Sua empresa não pode parar.",textStyle:"font-size:27px;font-weight:600;letter-spacing:-.03em;line-height:1.2"},
+        {label:"SUBHEADLINE",text:"Tenha uma conexão empresarial preparada para o seu negócio.",textStyle:"font-size:16px;line-height:1.5;color:var(--ink2)"},
+        {label:"CTA",text:"Fale com a Simplisoft.",textStyle:"display:inline-block;padding:10px 15px;border-radius:9px;background:var(--ink);color:var(--surface);font-size:14px;font-weight:600"}
+      ],
+      legenda:"Cada minuto offline tem custo. Reunião que cai, venda que não fecha, cliente que não é atendido.\n\nA internet empresarial da Simplisoft entrega link estável, banda simétrica e suporte técnico local 24/7 — dimensionada para o tamanho real da sua operação, com espaço para crescer.\n\nFale com a gente e receba um diagnóstico gratuito da sua conexão. 👉 link na bio",
+      hashtags:["#internetempresarial","#simplisoft","#linkdedicado","#pme","#tiparaempresas","#conectividade"],
+      strategy:[
+        {k:"Público",v:"Donos e gestores de PMEs (5–50 funcionários) em Feira de Santana e região"},
+        {k:"Dor",v:"Queda de conexão interrompe atendimento e vendas; suporte de operadora é lento"},
+        {k:"Ângulo",v:"Custo da instabilidade, não velocidade — o argumento é continuidade do negócio"},
+        {k:"Prova",v:"SLA 99,9%, suporte local 24/7, banda simétrica"},
+        {k:"Funil",v:"Topo com dor + meio com prova; conversão via WhatsApp comercial"}
+      ],
+      artes,
+      direction:[
+        {k:"CONCEITO",v:"Continuidade operacional retratada em ambiente real de trabalho"},
+        {k:"COMPOSIÇÃO",v:"Regra dos terços, sujeito à direita, respiro superior-esquerdo para a headline"},
+        {k:"ILUMINAÇÃO",v:"Luz natural lateral difusa, sombras suaves, sem flare"},
+        {k:"ENQUADRAMENTO",v:"Plano médio, 35 mm, leve profundidade de campo"},
+        {k:"TIPOGRAFIA",v:"Sans geométrica 600 na headline, mono para dado técnico"},
+        {k:"ELEMENTOS",v:"Rack discreto ao fundo, notebook, sem ícones ilustrativos"},
+        {k:"ESTILO",v:"Fotografia documental corporativa, grão sutil, sem estética stock"}
+      ],
+      palette:["#0F3B63","#1E6FA8","#F2F4F7","#101210","#C7873F"].map(h=>({hex:h.toUpperCase(),swatch:"height:56px;border-radius:9px;border:1px solid var(--border);background:"+h})),
+      prompt:"corporate office interior, small business team, natural diffuse side light, meeting table with laptop, blurred server rack in background, deep petrol blue palette, documentary photography, 35mm, upper-left negative space for headline, subtle grain, 1:1",
+      scoreOffset:276-276*0.82,
+      scores:[["Copy",88],["Composição",81],["Hierarquia",78],["Contraste",84],["Marca",90]].map(x=>({k:x[0],v:x[1],
+        bar:"height:100%;width:"+x[1]+"%;background:"+(x[1]>=85?"var(--ok)":x[1]>=80?"var(--accent)":"var(--warn)")})),
+      critique:[
+        {label:"Pontos fortes",dot:"width:7px;height:7px;border-radius:99px;background:var(--ok)",items:[
+          "Headline curta, com tensão real e leitura em 1 segundo.",
+          "Paleta fiel ao brand kit da Simplisoft.",
+          "Ambiente fotográfico crível, sem estética de banco de imagens."]},
+        {label:"Problemas encontrados",dot:"width:7px;height:7px;border-radius:99px;background:var(--warn)",items:[
+          "CTA poderia ter maior destaque.",
+          "Subtítulo compete com a headline em peso visual.",
+          "Margem inferior menor que a superior — desequilíbrio de respiro."]},
+        {label:"Recomendações",dot:"width:7px;height:7px;border-radius:99px;background:var(--accent)",items:[
+          "Aumentar o botão de CTA em 20% e usar fundo sólido de alto contraste.",
+          "Reduzir o subtítulo para 60% do tamanho da headline.",
+          "Padronizar margens em 88 px e reposicionar o logo no topo."]}
+      ],
+      applyFixes:()=>{ this.setState({tab:"ref"}); this.flash("Melhorias aplicadas · gerando V5"); },
+      refine:s.refine, setRefine:e=>this.setState({refine:e.target.value}),
+      versions:[["V1","Primeira geração"],["V2","Copy mais direta"],["V3","Nova paleta"],["V4","CTA em destaque"]].map(v=>{
+        const on=s.version===v[0];
+        return {id:v[0],note:v[1],pick:()=>this.setState({version:v[0]}),
+          style:"display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;border:1px solid "+(on?"var(--bstrong)":"var(--border)")+";background:"+(on?"var(--surface2)":"var(--surface)")+";color:var(--ink)"};
+      }),
+      compare:[
+        {id:"V3",score:"78/100",canvas:this.canvas(0,"260px"),ctaStyle:"display:inline-block;margin-top:12px;padding:6px 10px;border:1px solid rgba(255,255,255,.5);border-radius:7px;color:#fff;font-size:10px;font-weight:600"},
+        {id:"V4",score:"82/100",canvas:this.canvas(1,"260px"),ctaStyle:"display:inline-block;margin-top:12px;padding:9px 15px;border-radius:8px;background:#fff;color:#101210;font-size:12px;font-weight:700"}
+      ],
+
+      projTitle:R==="campanhas"?"Campanhas":R==="templates"?"Templates":"Projetos",
+      projSub:R==="campanhas"?"Cada campanha agrupa conceito, estratégia, copies, posts, stories, anúncios e banners."
+        :R==="templates"?"Estruturas reaproveitáveis de briefing, copy e direção de arte."
+        :"Todas as criações do workspace, agrupadas por marca.",
+      projCount:projList.length+" ITENS",
+      projFilters:["Todos","Em andamento","Concluídos","Favoritos"].map(f=>({label:f,style:this.chip(s.projFilter===f),pick:()=>this.setState({projFilter:f})})),
+      projList,
+
+      libFilters:["Tudo","Imagens","Artes","Copies","Prompts","Templates","Favoritos"].map(f=>({label:f,style:this.chip(s.libFilter===f),pick:()=>this.setState({libFilter:f})})),
+      libItems:[
+        ["Internet empresarial · v4","arte",["1080²","simplisoft"]],["Escritório luz natural","imagem",["referência","foto"]],
+        ["Headline · continuidade","copy",["headline","b2b"]],["Prompt documental corporativo","prompt",["gpt-image","1:1"]],
+        ["Story suporte 24/7","arte",["1080×1920","story"]],["Legenda dor + prova","copy",["legenda","instagram"]],
+        ["Template campanha PME","template",["4 peças","campanha"]],["Rack servidor desfocado","imagem",["referência","fundo"]]
+      ].map((x,i)=>({name:x[0],preview:x[1].toUpperCase(),tags:x[2],
+        canvas:"display:grid;place-items:center;height:120px;background:"+(x[1]==="copy"||x[1]==="prompt"?"var(--surface2)":CANV[i%4])+";font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:"+(x[1]==="copy"||x[1]==="prompt"?"var(--ink3)":"rgba(255,255,255,.7)")})),
+
+      brands:[["Simplisoft","Telecom & TI","S"],["Nova Clínica","Saúde","N"],["Atlas Log","Logística","A"]].map(b=>{
+        const on=s.brandSel===b[0];
+        return {name:b[0],sector:b[1],initial:b[2],pick:()=>this.setState({brandSel:b[0]}),
+          style:"display:flex;align-items:center;gap:10px;padding:10px;border-radius:11px;cursor:pointer;border:1px solid "+(on?"var(--bstrong)":"var(--border)")+";background:"+(on?"var(--surface2)":"var(--surface)"),
+          mark:"width:28px;height:28px;flex:0 0 28px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--ink);color:var(--surface)"};
+      }),
+      brandColors:["#0F3B63","#1E6FA8","#C7873F","#101210"].map(h=>({hex:h.toUpperCase(),swatch:"height:52px;border-radius:9px;border:1px solid var(--border);background:"+h})),
+      brandFields:[
+        {k:"DESCRIÇÃO",v:"Provedora de internet e serviços de TI para empresas, com infraestrutura própria e suporte local."},
+        {k:"PÚBLICO",v:"PMEs de 5 a 50 funcionários; gestores de clínicas, escritórios e comércio"},
+        {k:"PRODUTOS",v:"Internet dedicada, Wi-Fi corporativo, PABX em nuvem, firewall gerenciado"},
+        {k:"SERVIÇOS",v:"Suporte 24/7, monitoramento, projeto de rede, migração assistida"},
+        {k:"PALAVRAS PREFERIDAS",v:"estabilidade · continuidade · suporte local · dimensionado · sem interrupção"}
+      ],
+      banned:["revolucionário","disruptivo","mágico","imperdível","o melhor do mundo"],
+
+      agents:s.agentsList.map((a,i)=>{
+        const off=!!a.off;
+        return {name:a.name,initials:a.initials,desc:a.desc,model:a.model,temp:a.temp,runs:a.runs,tools:a.tools,prompt:a.prompt,niche:a.niche,
+          status:off?"PAUSADO":"ATIVO", badge:this.badge(off?"wait":"ok"),
+          mark:"width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;font:600 11px/1 'JetBrains Mono',monospace;background:var(--asoft);color:var(--accent)",
+          edit:()=>this.editAgentAt(i),
+          toggle:()=>{ const l=[...s.agentsList]; l[i]={...l[i],off:!off}; this.setState({agentsList:l}); },
+          switchStyle:"width:38px;height:22px;flex:0 0 38px;border-radius:99px;border:1px solid var(--border);cursor:pointer;padding:2px;display:flex;justify-content:"+(off?"flex-start":"flex-end")+";background:"+(off?"var(--surface2)":"var(--accent)"),
+          knobStyle:"width:16px;height:16px;border-radius:99px;background:"+(off?"var(--ink3)":"var(--onacc)")+";display:block"};
+      }),
+      newAgent:()=>this.newAgent(),
+
+      integrations:s.integList.map((x,i)=>({name:x.name,initial:x.initial,model:x.model,key:x.key,usage:x.usagePct+"%",status:x.statusLabel,badge:this.badge(x.statusKind),
+        edit:()=>this.editIntegAt(i),
+        mark:"width:32px;height:32px;flex:0 0 32px;border-radius:9px;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--surface2);color:var(--ink)",
+        bar:"display:block;height:100%;width:"+x.usagePct+"%;background:"+(x.usagePct>75?"var(--warn)":"var(--accent)")})),
+      newInteg:()=>this.newInteg(),
+
+      cfgTabs:["Perfil","Workspace","Preferências","Modelos de IA","Limites de uso","Billing","API Keys","Notificações","Segurança"].map(t=>{
+        const on=s.cfgTab===t;
+        return {label:t,pick:()=>this.setState({cfgTab:t}),
+          style:"padding:9px 11px;border:none;border-radius:9px;text-align:left;font-size:12.5px;font-weight:"+(on?"600":"500")+";cursor:pointer;background:"+(on?"var(--asoft)":"none")+";color:"+(on?"var(--accent)":"var(--ink2)")};
+      }),
+      cfgTitle:s.cfgTab,
+      cfgSub:{"Perfil":"Seus dados e preferências pessoais.","Workspace":"Identidade e membros do workspace Simplisoft.","Preferências":"Idioma, tema e comportamento do estúdio.","Modelos de IA":"Modelo padrão por etapa do workflow.","Limites de uso":"Tetos de créditos e gerações por ciclo.","Billing":"Plano, faturas e método de pagamento.","API Keys":"Chaves do workspace — nunca exibidas por completo.","Notificações":"Quando e como avisamos você.","Segurança":"Acesso, sessões e autenticação."}[s.cfgTab],
+      cfgRows:{
+        "Perfil":[{k:"Nome",hint:"Exibido nas criações",v:"Vidal Costa",action:"Editar"},{k:"E-mail",hint:"Login e notificações",v:"vidal@simplisoft.com.br",action:"Editar"},{k:"Cargo",hint:"Usado no tom das entregas",v:"Marketing",action:"Editar"},{k:"Idioma",hint:"Interface e saídas",v:"Português (BR)",action:"Trocar"}],
+        "Workspace":[{k:"Nome",hint:"Visível para a equipe",v:"Simplisoft",action:"Editar"},{k:"Membros",hint:"3 editores · 1 admin",v:"4",action:"Gerenciar"},{k:"Marcas",hint:"Brand kits ativos",v:"3",action:"Ver"},{k:"Plano",hint:"Renova em 12 dias",v:"Studio",action:"Alterar"}],
+        "Preferências":[{k:"Tema",hint:"Claro, escuro ou sistema",v:"Sistema",action:"Trocar"},{k:"Variações por geração",hint:"Padrão em novas criações",v:"4",action:"Ajustar"},{k:"Formato padrão",hint:"Aplicado ao briefing",v:"1080 × 1080",action:"Ajustar"},{k:"Autoavaliação",hint:"Rodar o crítico sempre",v:"Ativa",action:"Desativar"}],
+        "Modelos de IA":[{k:"Estratégia",hint:"Etapa 01",v:"GPT-4o",action:"Trocar"},{k:"Copy",hint:"Etapa 02",v:"Claude Sonnet 4",action:"Trocar"},{k:"Direção criativa",hint:"Etapa 03",v:"Claude Sonnet 4",action:"Trocar"},{k:"Geração visual",hint:"Etapa 04",v:"GPT Image",action:"Trocar"}],
+        "Limites de uso":[{k:"Créditos por ciclo",hint:"1.480 usados",v:"5.000",action:"Aumentar"},{k:"Gerações por dia",hint:"Por usuário",v:"120",action:"Ajustar"},{k:"Alerta de consumo",hint:"E-mail ao atingir",v:"80%",action:"Ajustar"},{k:"Ação no limite",hint:"Ao esgotar créditos",v:"Pausar fila",action:"Alterar"}],
+        "Billing":[{k:"Plano",hint:"Cobrança mensal",v:"Studio · R$ 890",action:"Alterar"},{k:"Método",hint:"Cartão corporativo",v:"•••• 4417",action:"Atualizar"},{k:"Próxima fatura",hint:"19 set 2026",v:"R$ 890,00",action:"Ver"},{k:"Notas fiscais",hint:"Últimos 12 meses",v:"12",action:"Baixar"}],
+        "API Keys":[{k:"Chave de produção",hint:"Criada em 12 ago 2026",v:"acs-••••••9d31",action:"Rotacionar"},{k:"Chave de teste",hint:"Ambiente sandbox",v:"acs-test-•••4f0a",action:"Rotacionar"},{k:"Webhooks",hint:"Eventos de geração",v:"2 ativos",action:"Gerenciar"},{k:"IPs permitidos",hint:"Restrição de origem",v:"Nenhuma",action:"Definir"}],
+        "Notificações":[{k:"Campanha pronta",hint:"Ao concluir o workflow",v:"E-mail + app",action:"Ajustar"},{k:"Falha de geração",hint:"Erro em qualquer etapa",v:"E-mail",action:"Ajustar"},{k:"Consumo de créditos",hint:"Aviso em 80%",v:"App",action:"Ajustar"},{k:"Resumo semanal",hint:"Sextas, 08:00",v:"Ativo",action:"Desativar"}],
+        "Segurança":[{k:"Autenticação em 2 fatores",hint:"App autenticador",v:"Ativa",action:"Gerenciar"},{k:"Sessões ativas",hint:"3 dispositivos",v:"3",action:"Encerrar"},{k:"SSO",hint:"Google Workspace",v:"Desativado",action:"Ativar"},{k:"Log de auditoria",hint:"Últimos 90 dias",v:"Disponível",action:"Exportar"}]
+      }[s.cfgTab],
+
+      cmdOpen:s.cmdOpen,
+      cmdItems:[
+        {label:"Nova criação",kind:"AÇÃO",icon:I.spark,run:this.go("criar")},
+        {label:"Campanha Internet Empresarial",kind:"PROJETO",icon:I.folder,run:()=>this.setState({route:"resultado",tab:"copy",cmdOpen:false})},
+        {label:"Ver artes geradas",kind:"IR PARA",icon:I.image,run:()=>this.setState({route:"resultado",tab:"artes",cmdOpen:false})},
+        {label:"Brand kit Simplisoft",kind:"MARCA",icon:I.brand,run:this.go("marcas")},
+        {label:"Agentes de IA",kind:"IR PARA",icon:I.agents,run:this.go("agentes")},
+        {label:"Alternar tema",kind:"AÇÃO",icon:I.moon,run:()=>this.setState({theme:s.theme==="light"?"dark":"light",cmdOpen:false})}
+      ],
+      // ── Editor de agente ──
+      agentEditorOpen:s.editAgent!=null,
+      agentEditorTitle:s.editAgent==="new"?"Novo agente":"Editar agente",
+      agentIsNew:s.editAgent==="new",
+      dName:d.name||"", dDesc:d.desc||"", dPrompt:d.prompt||"", dTemp:d.temp||"0.5",
+      setDName:this.setD("name"), setDDesc:this.setD("desc"), setDPrompt:this.setD("prompt"), setDTemp:this.setD("temp"),
+      dInitials:this.initialsFrom(d.name||""),
+      agentModels:MODELS.map(m=>({label:m, pick:()=>this.setState({draft:{...d,model:m}}), style:this.chip(d.model===m)})),
+      agentNiches:NICHES.map(n=>({label:n.name, pick:()=>this.setState({draft:{...d,niche:n.name}}), style:this.chip(d.niche===n.name)})),
+      agentToolOpts:AG_TOOLS.map(t=>({label:t, toggle:()=>this.toggleTool(t), style:this.chip((d.tools||[]).includes(t))})),
+      agentTemplates:AG_TEMPLATES.map(t=>({name:t.name, niche:t.niche, desc:t.desc, apply:()=>this.applyTemplate(t),
+        style:"display:flex;flex-direction:column;gap:4px;padding:11px 12px;border:1px solid "+(d.name===t.name?"var(--bstrong)":"var(--border)")+";border-radius:11px;background:var(--surface);cursor:pointer;text-align:left"})),
+      saveAgent:()=>this.saveAgent(), deleteAgent:()=>this.deleteAgent(),
+      closeEditor:()=>this.setState({editAgent:null, editInteg:null, draft:{}}),
+
+      // ── Editor de integração ──
+      integEditorOpen:s.editInteg!=null,
+      integEditorTitle:s.editInteg==="new"?"Adicionar provedor":"Editar integração",
+      integIsNew:s.editInteg==="new",
+      iName:d.name||"", iModel:d.model||"", iEndpoint:d.endpoint||"", iKey:d.key||"",
+      setIName:this.setD("name"), setIModel:this.setD("model"), setIEndpoint:this.setD("endpoint"), setIKey:this.setD("key"),
+      providerPresets:PROVIDERS.map(p=>({label:p.name, apply:()=>this.applyProvider(p), style:this.chip(d.name===p.name)})),
+      saveInteg:()=>this.saveInteg(), deleteInteg:()=>this.deleteInteg(),
+
+      drawerOpen:s.drawer!=null, closeDrawer:()=>this.setState({drawer:null}), sel,
+      regen:()=>{ this.setState({drawer:null}); this.flash("Regenerando variação…"); }
+    };
+  }
+}
+</script>
+</body>
+</html>
