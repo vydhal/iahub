@@ -8,9 +8,11 @@ export class AnthropicProvider implements AIProvider {
   name = 'AnthropicProvider';
   private client: Anthropic | null = null;
 
-  constructor() {
-    if (env.ANTHROPIC_API_KEY && !env.AI_MOCK_MODE) {
-      this.client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  /** `apiKeyOverride`: chave própria do workspace (Integrações). Sem ela, usa a chave global da plataforma. */
+  constructor(apiKeyOverride?: string) {
+    const apiKey = apiKeyOverride || env.ANTHROPIC_API_KEY;
+    if (apiKey && !env.AI_MOCK_MODE) {
+      this.client = new Anthropic({ apiKey });
     }
   }
 

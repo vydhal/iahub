@@ -37,3 +37,6 @@ Thumbs.db
 exemplo/
 *.thumbnail
 .thumbnail
+
+# Backups locais (contém dados de clientes — nunca versionar)
+backups/

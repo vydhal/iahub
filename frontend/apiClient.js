@@ -87,6 +87,13 @@ export const apiClient = {
     });
   },
 
+  async setCampaignFavorite(id, isFavorite) {
+    return this.fetch(`/campaigns/${id}/favorite`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isFavorite }),
+    });
+  },
+
   // Stream de Workflow em Tempo Real via SSE
   streamWorkflow(campaignId, onStepUpdate, onComplete, onError) {
     // EventSource não envia headers: o backend valida o JWT recebido na query.
@@ -162,6 +169,33 @@ export const apiClient = {
 
   async deleteBrand(id) {
     return this.fetch(`/brands/${id}`, { method: 'DELETE' });
+  },
+
+  // Logo da marca: multipart (não passa pelo fetch() genérico — precisa do boundary automático
+  // do navegador, nunca Content-Type: application/json).
+  async uploadBrandLogo(id, file) {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${API_BASE}/brands/${id}/logo`, {
+      method: 'POST',
+      headers: { ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) },
+      body: form,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Erro ao enviar a logo' }));
+      throw new Error(err.message || 'Erro no servidor');
+    }
+    return res.json();
+  },
+
+  async deleteBrandLogo(id) {
+    return this.fetch(`/brands/${id}/logo`, { method: 'DELETE' });
+  },
+
+  // `logoUrl` já vem com o prefixo /api (mesmo padrão dos assets de mídia) — só falta o token,
+  // já que <img> não manda cabeçalho Authorization.
+  brandLogoSrc(logoUrl) {
+    return logoUrl ? `${logoUrl}&token=${this.token}` : null;
   },
 
   // Integrations

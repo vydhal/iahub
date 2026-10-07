@@ -1,0 +1,15 @@
+aihub.simplisoft.com.br {
+	encode gzip
+
+	# API do backend — mesmo domínio, sem precisar de subdomínio/DNS extra.
+	handle /api/* {
+		reverse_proxy backend:3000
+	}
+
+	# SPA: tudo o que não é /api cai no index.html.
+	handle {
+		root * /usr/share/caddy/html
+		try_files {path} /index.html
+		file_server
+	}
+}

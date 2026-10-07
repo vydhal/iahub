@@ -19,7 +19,7 @@ const EXT: Record<string, string> = {
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
-async function saveBuffer(workspaceId: string, buffer: Buffer, mimeType: string, name: string, origin: string) {
+export async function saveBuffer(workspaceId: string, buffer: Buffer, mimeType: string, name: string, origin: string) {
   if (!EXT[mimeType]) throw new Error(`Tipo de arquivo não suportado: ${mimeType}`);
   if (buffer.byteLength > MAX_BYTES) throw new Error('Arquivo maior que 10 MB.');
 

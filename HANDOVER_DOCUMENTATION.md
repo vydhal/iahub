@@ -2,8 +2,131 @@
 ## AI Creative Studio — Full-Stack AI Orchestration Platform
 
 > **Status Geral:** Backend e Frontend genuinamente conectados e validados ponta a ponta (login → criar campanha → workflow real → dados persistidos → CRUD real de agentes/integrações/marcas). `npx tsc --noEmit` = 0 erros.
-> **Data de Atualização:** 07/10/2026 (Editor de posts, Cobrança, Superadmin/módulos, Agendador, identidade da plataforma e diálogos internos). Sessões anteriores: 19/09/2026 (Agent Operations Center) e 08/09/2026 (correção mock → real).
+> **Data de Atualização:** 07/10/2026 (noite) — Auditoria completa de Dashboard/Projetos/Templates/Campanhas/Biblioteca/Aprovações/Credenciais/Execuções. Sessões anteriores no mesmo dia: Editor de posts (chave de IA honesta); logo da marca com extração automática de paleta; bloqueadores de produção (chave de IA por workspace, segredos próprios, backup, scaffold de deploy); Editor de posts, Cobrança, Superadmin/módulos, Agendador, identidade da plataforma e diálogos internos. Sessões anteriores: 19/09/2026 (Agent Operations Center) e 08/09/2026 (correção mock → real).
 > **Importante:** a versão anterior deste documento (07-08/09) dizia "100% Funcional | Frontend & Backend Conectados" — **isso era falso**. Havia um bug de proxy que quebrava a conexão real silenciosamente (ver seção 5-A). A aplicação rodava inteira em cima de fallbacks locais. Essa sessão corrigiu isso e validou tudo com testes reais (Playwright + curl), não apenas leitura de código.
+
+---
+
+## 🆕 SESSÃO 07/10/2026 (parte 7) — AUDITORIA DAS DEMAIS ROTAS (Dashboard, Projetos, Templates, Campanhas, Biblioteca, Aprovações, Credenciais, Execuções)
+
+Pedido: depois do Editor de posts, auditar com o mesmo rigor todas as rotas que ainda não tinham passado por revisão nesta sessão, usando 3 agentes de investigação em paralelo (um por grupo de rotas) e depois corrigir o que fosse achado.
+
+### Veredito por rota
+- **Dashboard** — REAL. `GET /operations/summary` com agregações Prisma de verdade (sem números aleatórios/hardcoded).
+- **Aprovações / Credenciais / Execuções** — REAL, sem nenhum achado. Fluxo de aprovação resume a execução via BullMQ de verdade; credenciais usam AES-256-GCM e são decriptadas e consumidas de fato pelas tools do Agent Operations Center; execuções têm status/transições reais do engine.
+- **Projetos / Campanhas** — REAL nos dados, mas com bugs e teatro de UI corrigidos nesta sessão (ver abaixo).
+- **Biblioteca** — backend real, mas a tela em si tinha vários problemas de UI corrigidos nesta sessão (ver abaixo).
+- **Templates** — **era 100% decorativo**: a mesma tela de Projetos, renderizando as campanhas reais do usuário sob o rótulo "Templates", sem nenhuma entidade de template no banco, sem CRUD, sem "aplicar template". Perguntado ao usuário se deveria virar uma funcionalidade real ou ser removido — decisão: **remover a aba** até existir uma funcionalidade de verdade por trás. Removida do menu (`NAV`), do roteamento (`isProj`) e do mapa de permissão por módulo (`MAP`).
+
+### Correções aplicadas
+
+**Campanhas — o achado mais sério da auditoria:** quando a criação de campanha falhava (erro de rede, chave de IA inválida, etc.), o frontend **engolia o erro e fingia sucesso**: `runFlow()` (`frontend/index.html`) tinha um `.catch()` que disparava uma barra de progresso fake via `setInterval` e, ao final, mostrava "Campanha pronta · 4 variações geradas" e levava para a tela de resultado — que, sem `activeCampaign` real, renderizava conteúdo de demonstração hardcoded como se fosse o resultado da geração. Era a violação mais direta do pedido do usuário ("não finja o que não aconteceu"). Corrigido: removido todo o fallback de progresso falso; erros de criação (`.catch`) e erros do streaming SSE (`onError`) agora aparecem de verdade para o usuário via `flash()` e devolvem à tela de briefing.
+
+Isso só virou visível porque a causa-raiz também foi corrigida: **`ProviderRouter.getProviderForWorkspace`** (`backend/src/shared/ai/ProviderRouter.ts`) não validava se a chave global (`.env`) era de fato utilizável — sem chave própria do workspace, ele caía para a chave global mesmo sendo o placeholder `sk-dummy-...`, estourando um 401 cru da Anthropic/OpenAI no meio do workflow. Agora, sem nenhuma chave usável (nem do workspace, nem global), ele lança um erro claro e acionável ("Nenhuma chave de IA configurada para OpenAI. Cadastre a sua em Configurações → Integrações") **antes** de gastar uma chamada real — o mesmo texto chega até o usuário pela SSE e pelo toast. Validado ao vivo: criar uma campanha sem chave configurada agora mostra esse aviso exato na tela, em vez da falsa "Campanha pronta".
+
+**Refinamento (`refineCreativeVersion`)** fabricava a melhora de nota: somava +4 no `overallScore` e +5 no `copyScore` da versão anterior sem reavaliar nada, e injetava a frase fixa "Ajuste aplicado com sucesso" nos pontos fortes. Corrigido: a nova versão agora passa de novo pelo Agente Crítico (mesmo schema/prompt da Etapa 5), com notas e observações genuinamente recalculadas — podendo inclusive piorar numa rubrica, já que é uma reavaliação real.
+
+**Etapa 6 "Refinamento" do workflow principal** não chama nenhum modelo (é um no-op), mas registrava telemetria fabricada (100/100 tokens, US$ 0,001 de custo) como se tivesse processado algo. Zerado para refletir a realidade.
+
+**Imagens geradas por campanha nunca eram persistidas**: a OpenAI devolve uma URL temporária (expira em ~1h) e o código salvava essa URL direto no banco com um `storageKey` que nunca existiu em disco — a peça "sumia" depois de uma hora e nunca aparecia na Biblioteca (que é alimentada por outro modelo, `MediaAsset`). Corrigido: `OrchestratorService` agora baixa cada imagem gerada e salva via o mesmo pipeline de armazenamento da Biblioteca (`saveBuffer`, exportado de `media.routes.ts`), criando um `MediaAsset` real (origem "ai") — a peça passa a ser permanente e aparece em Biblioteca → Imagens.
+
+**Botões-teatro** (`onClick` que só chamava `flash()` sem efeito real, dando a entender que algo tinha acontecido): "Regenerar"/"Duplicar" por variação, "Editar"/"Usar como final" no drawer de detalhe, e o sino de notificações no topo — todos reescritos para avisar honestamente "ainda não disponível" em vez de fingir sucesso. A lista de versões (V1..V4) também tinha um fallback hardcoded de 4 versões fictícias quando não havia nenhuma real — virou um placeholder honesto "Nenhuma versão gerada ainda".
+
+**Filtro "Favoritos" em Projetos/Campanhas** estava, por engano, ligado ao status `FAILED` (`statusKind==="warn"`) — clicar em "Favoritos" mostrava campanhas que falharam. Não existia nenhum campo de favorito no banco. Implementado de verdade: `Campaign.isFavorite` (migração Prisma), endpoint `PATCH /campaigns/:id/favorite`, estrela clicável no card (otimista, com rollback se a chamada falhar) e o filtro agora usa o campo real.
+
+**Biblioteca (tela do menu lateral)** tinha vários problemas: (1) não carregava os próprios dados ao navegar direto para ela — só populava se o usuário tivesse passado pelo Editor de posts antes; corrigido em `onRoute()`. (2) a busca por texto não tinha nenhum binding — digitar não fazia nada; implementada busca real por nome/tag. (3) os chips de filtro incluíam categorias sem nenhuma base real ("Copies", "Prompts", "Templates", "Favoritos" — nenhuma dessas existe como dado no sistema); reduzidos para "Tudo"/"Imagens"/"Artes", que correspondem a dados de verdade (`MediaAsset` vs. `CreativeVersion.assets`), e o clique nos chips agora filtra de fato a lista. (4) não havia nenhum botão de abrir/excluir na tela — adicionado "Abrir" (nova aba) em todo item e "Excluir" real (com confirmação) nos itens que são `MediaAsset` de verdade.
+
+### Validado ao vivo (Playwright)
+- Biblioteca carrega sozinha ao navegar direto (sem passar por Carrossel antes); busca por termo inexistente mostra "Nenhum item encontrado" honesto; filtro "Artes" mostra vazio de verdade (nenhuma campanha gerou imagem ainda nesta base); botões Abrir/Excluir presentes e funcionais.
+- Criei uma campanha de teste sem chave de IA configurada: o toast mostrou exatamente "Nenhuma chave de IA configurada para OpenAI. Cadastre a sua em Configurações → Integrações." e o usuário voltou à tela de briefing — nunca mais a falsa "Campanha pronta".
+- Favoritei uma campanha pela estrela do card; o filtro "Favoritos" passou a mostrar exatamente essa campanha (e só ela), confirmando que não está mais colado ao status "Falhou".
+- Nav sem "Templates", sem erros de console.
+- `npx tsc --noEmit` = 0 erros.
+- Dados de teste (campanhas, favoritos) removidos do banco ao final.
+
+### O que fica como gap conhecido (não implementado nesta sessão)
+- Regenerar/duplicar uma variação avulsa dentro de uma campanha (hoje só existe refinamento da peça inteira via `refineCreativeVersion`).
+- "Usar como final" / marcar uma versão como definitiva (não existe campo para isso no schema).
+- Exportar campanha / "Entregar campanha" (botões do topo da tela de resultado — ainda avisam "ainda não disponível").
+- Sino de notificações no topo é só um indicador visual, sem um sistema de notificações real por trás.
+- Templates: removido da navegação; construir de verdade (entidade reutilizável + "aplicar ao criar") fica para quando o usuário priorizar.
+
+---
+
+## 🆕 SESSÃO 07/10/2026 (parte 6) — EDITOR DE POSTS: DIAGNÓSTICO DO "MOCKADO" E CHAVE DE IA HONESTA
+
+Pedido: o usuário reportou que o Editor de posts (carrossel) estava "mockado" e pediu para de fato funcionar.
+
+### Diagnóstico
+Reli `carousel.routes.ts`, `carousel.service.ts` e todo o código do editor em `frontend/index.html` (salvar/abrir projeto, roteiro com IA, prompt de imagem, geração de imagem, exportar PNG/ZIP, Salvar na Biblioteca). **Nada ali era mock client-side** — todas as ações já chamavam endpoints reais (`POST /carousel`, `/carousel/script`, `/carousel/image-prompt`, `/carousel/image`, `/media`, `/media/data-url`), com captura real de canvas via `html-to-image` e ZIP via `JSZip`.
+
+A causa raiz estava em outro lugar: **o seed (`backend/prisma/seed.ts`) plantava duas integrações (OpenAI, Anthropic) com `statusLabel:"CONECTADO"` e uma chave **literalmente mascarada** (`sk-ant-••••••7c21`, `sk-••••••••3f9a`) — nunca foi uma chave de verdade, só um texto decorativo para a demo parecer configurada**. Resultado: a tela de Integrações mentia dizendo "CONECTADO", e toda chamada de IA do Editor de posts (`resolveWorkspaceKey` corretamente rejeita valores com `•`) caía para a chave global do `.env`, que também é só o placeholder `sk-dummy-...`/`sk-ant-dummy-...` — e explodia com 401 cru da Anthropic (`Falha ao gerar roteiro: 401 {"type":"error",...}`), sem nenhuma orientação ao usuário.
+
+### Correção
+- **`backend/prisma/seed.ts`**: nova função `integrationSeed(envKey)` — só marca `CONECTADO` (com a chave real criptografada) quando existe uma chave de verdade no `.env` da plataforma; caso contrário grava `apiKey:null`, `statusLabel:"NÃO CONFIGURADO"`, refletindo o estado real em vez de fingir uma conexão.
+- **`shared/ai/keyResolver.ts`**: novas funções `globalKeyUsable(kind)` e `hasUsableKey(workspaceId, kind)` — centralizam a pergunta "existe alguma chave de verdade (global ou do workspace) para este provedor?", reaproveitada em vez de duplicar a checagem que só existia no endpoint `/image`.
+- **`carousel.routes.ts`**: `/script`, `/image-prompt` e `/image` agora chamam `hasUsableKey()` **antes** de tentar o provedor e devolvem 422 com mensagem acionável ("cadastre sua chave Anthropic/OpenAI em Configurações → Integrações") em vez de deixar a chamada estourar e vazar o erro cru do provedor num 502.
+- Corrigidas à mão as linhas de `integrations` já salvas no banco local (tinham 2 cópias duplicadas de cada provedor, todas com a chave mascarada de seed) para refletirem `NÃO CONFIGURADO`.
+
+### Validado de verdade (Playwright)
+1. Sem chave configurada: `POST /carousel/script` → 422 com a mensagem nova, exibida no próprio painel "Gerar roteiro com IA" (antes: 502 com JSON cru da Anthropic).
+2. Tela de Integrações passou a mostrar "NÃO CONFIGURADO" para OpenAI e Anthropic (antes mentia "CONECTADO").
+3. Cadastrei uma chave sintética (não-real) só para a própria workspace pela tela de Integrações → o Editor de posts voltou a tentar a API real, agora usando a chave do cliente em vez da global (confirmado porque o erro virou 401 **da própria Anthropic** de novo, e não mais o 422 de "não configurado") — prova que o fluxo *bring your own key* por workspace está de fato ligado ao Editor de posts. Removi a chave de teste depois.
+4. Salvar projeto, abrir em "Meus carrosséis" e exportar PNG do slide testados ponta a ponta com sucesso (toast "PNG exportado", download real, projeto listado com contagem de slides e hora certas). Projeto de teste removido do banco depois.
+5. `npx tsc --noEmit` = 0 erros.
+
+### O que ainda falta para o roteiro/imagem gerarem conteúdo real
+Nada de código — só falta uma **chave de verdade** (Anthropic e/ou OpenAI) cadastrada em Configurações → Integrações (ou no `.env` da plataforma). Sem isso, o sistema recusa honestamente em vez de inventar conteúdo, como pedido pelo usuário.
+
+---
+
+## 🆕 SESSÃO 07/10/2026 (parte 5) — LOGO DA MARCA + EXTRAÇÃO AUTOMÁTICA DE PALETA
+
+Pedido: deixar a tela de Marcas no padrão de ferramentas de mercado (Looka, Canva Brand Kit, Genna) — importar a logo e já sair com a paleta de cores, em vez de só aceitar hex digitado à mão.
+
+### O que foi adicionado
+- **Upload de logo por marca** (`POST /api/brands/:id/logo`, multipart, PNG/JPG/WEBP/SVG até 4 MB) — arquivo salvo em `storage/brands/<workspaceId>/<brandId>/logo.<ext>`, servido por `GET /api/brands/:id/logo?token=` (mesmo padrão de autenticação via query usado pelos assets de mídia, já que `<img>` não manda header).
+- **Extração automática de paleta** (`shared/ai/../media/colorExtract.ts`, biblioteca `sharp`): reamostra a logo, quantiza os pixels em baldes de cor, descarta fundo quase-branco/transparente e devolve até 5 cores dominantes garantindo distância mínima entre elas (evita 5 tons quase iguais). Ao enviar a logo, essas cores **substituem** a lista de `BrandColor` da marca automaticamente — exatamente o fluxo das ferramentas citadas. Formato SVG não passa por extração (não é raster); o upload funciona, só não gera paleta sozinho.
+- Editor de marca no frontend ganhou a seção de logo (preview, "Enviar/Trocar logo", remover) acima dos campos de texto; lista de marcas e cabeçalho de detalhe mostram a logo real quando existe, em vez do círculo com a inicial.
+
+### Validado de verdade
+Gerei uma imagem de teste (metade `#0F3B63`, metade `#C7873F`) e enviei via API: a resposta trouxe exatamente essas duas cores em `colors`, `paletteExtracted:true`. Confirmei o arquivo servido corretamente (200, `image/png`, dimensões corretas) e bloqueado sem token (401). Repeti pelo navegador (Playwright): upload real pela UI, toast "Logo enviada · cores extraídas automaticamente", campo de cores atualizado ao vivo, preview na lista e no cabeçalho de detalhe — sem erro de console. `npx tsc --noEmit` = 0 erros.
+
+### O que ainda não cobre
+- SVG não gera paleta automática (precisaria rasterizar antes — não implementado, baixa prioridade já que logo em SVG costuma vir com as cores da marca já definidas no próprio arquivo de origem).
+- Sem edição manual de qual cor é "primária/secundária/destaque" — a paleta extraída entra como uma lista simples, na ordem de dominância.
+
+---
+
+## 🆕 SESSÃO 07/10/2026 (parte 4) — BLOQUEADORES DE PRODUÇÃO
+
+Revisão do trabalho da sessão anterior (verificado código por código, não só a documentação — tenancy, criptografia de credenciais, HMAC do webhook, SSRF do RPA, moduleGuard: tudo bateu). Ambiente subido do zero (volume do Postgres era novo nesta máquina): `prisma db push` + os 3 seeds, `npx tsc --noEmit` = 0 erros, login do cliente demo e do superadmin confirmados via navegador.
+
+### 1. Chave de IA por workspace (pedido explícito: "não quero hardcoded, quero que o cliente adicione a própria")
+**Antes:** a tela Integrações/API Keys salvava a chave do cliente criptografada no banco, mas **nada no pipeline de IA lia esse valor** — `ProviderRouter` só construía os providers com `env.OPENAI_API_KEY`/`env.ANTHROPIC_API_KEY` (chave única da plataforma, fixa desde a inicialização do processo). A tela era real no CRUD e inerte na prática — mesmo padrão de outras lacunas já documentadas aqui.
+
+**Agora:** `shared/ai/keyResolver.ts` resolve a chave do workspace (descriptografa a Integração cadastrada; ignora valores mascarados do seed de demonstração) e `ProviderRouter.getProviderForWorkspace(provider, workspaceId)` constrói o client do SDK com essa chave quando ela existe, caindo para a chave global da plataforma (`.env`) quando o workspace não tem a própria. Threadado nos 8 pontos que chamavam o router: as 4 etapas do `OrchestratorService` (campanha), `refineCreativeVersion`, as 2 chamadas de `carousel.service.ts` (roteiro e prompt de imagem) e `aiAnalyze.ts` (agentes operacionais). O método síncrono antigo (`getProvider`, sem workspace) continua existindo para quem não tem o workspace em mãos.
+
+**Validado de verdade, não só por leitura de código:** com `AI_MOCK_MODE=false`, chamei o endpoint real de roteiro do carrossel sem chave própria configurada — a chamada foi até a API real da Anthropic e voltou `401 authentication_error` (prova de que não caiu em mock nem quebrou). Depois troquei a Integração Anthropic do workspace por uma chave de teste (formato válido, não real) via `PATCH /api/integrations/:id` e repeti — mesmo tipo de erro, mas a chamada usou a chave do workspace (confirmado pelo encrypt/decrypt/mask correto no round-trip). Revertido ao placeholder do seed depois do teste.
+
+**Para o cliente usar a própria chave:** Config → API Keys (ou tela Integrações) → editar o provedor OpenAI/Anthropic → colar a chave real. Nenhuma mudança de código necessária — é só cadastrar.
+
+### 2. Segredos próprios (antes: compartilhados no `docker-compose.yml`)
+`JWT_SECRET` estava **literal no arquivo versionado** (nem usava variável de ambiente); `CREDENTIALS_KEY` tinha um valor padrão também versionado. Gerados valores novos e únicos para esta instalação (`openssl`-grade random, 48/32 bytes) e gravados só no `.env` local (fora do git). `docker-compose.yml` agora usa `${JWT_SECRET:?...}` e `${CREDENTIALS_KEY:?...}` — **o compose recusa subir sem eles**, então não tem mais como rodar acidentalmente com o segredo antigo. `env.ts` ganhou `JWT_SECRET.min(32)` como trava adicional.
+
+### 3. Backup (antes: nenhum)
+`scripts/backup.sh` (`pg_dump -Fc` + `tar` do `backend/storage/`, saída em `backups/<timestamp>/`, retenção automática das últimas 14) e `scripts/restore.sh` (restaura com confirmação explícita). Testado: backup real gerado e validado com `pg_restore -l` (178 entradas na TOC, arquivo íntegro). `backups/` no `.gitignore` — tem dado de cliente, nunca versionar.
+
+### 4. Domínio de produção: `aihub.simplisoft.com.br`
+Preparado `docker-compose.prod.yml` + `frontend/Dockerfile.prod` + `frontend/Caddyfile`: Caddy serve o build estático do frontend (`vite build` — testado, gera `dist/` normalmente apesar do motor de template custom) e faz reverse proxy de `/api/*` pro backend, **com HTTPS automático via Let's Encrypt** (não precisa de subdomínio extra nem certbot manual). Postgres/Redis sem porta publicada pro host em produção. **Importante:** isso é só o scaffold — eu não tenho acesso ao servidor `aihub.simplisoft.com.br`; alguém precisa copiar o repo pra lá, apontar o DNS, preencher o `.env` real e rodar `docker compose -f docker-compose.prod.yml up -d --build`. De propósito, o schema do banco **não** é aplicado automaticamente a cada subida em produção (ver comentário no arquivo) — isso evita rodar `--accept-data-loss` sem revisão numa base com dado real.
+
+### 5. Mercado Pago — decisão do usuário: adiado
+Sem conta ainda. O fluxo de baixa manual (sem gateway) já cobre cobrança nesse meio-tempo; fica documentado, não bloqueando o resto.
+
+### O que ainda falta dos bloqueadores originais
+- Confirmar HTTPS de ponta a ponta rodando de fato em `aihub.simplisoft.com.br` (depende de alguém aplicar o compose de produção no servidor real).
+- Gateway Mercado Pago (adiado, por decisão do usuário).
+- Rate limit no login/webhooks públicos e observabilidade (logs estruturados persistidos, alerta de fila parada) seguem na lista de "importantes", não mexidos hoje.
 
 ---
 
@@ -100,12 +223,12 @@ Métricas da plataforma: contas, suspensas, usuários ativos, execuções 30d, f
 
 ## 🚧 O QUE AINDA FALTA PARA PRODUÇÃO (lista consolidada)
 
-**Bloqueadores (antes do primeiro cliente pagante)**
-1. **Chaves reais de IA** — hoje `AI_MOCK_MODE=true`: roteiro e análise vêm marcados como simulados. Configurar `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` e desligar o mock.
-2. **`CREDENTIALS_KEY` própria** e `JWT_SECRET` fora do código — o compose traz valores de desenvolvimento.
-3. **HTTPS + domínio + `PUBLIC_API_URL`** reais (webhooks de pagamento e links assinados do agendador dependem disso).
-4. **Backup do Postgres e do diretório `storage/`** (mídia e capturas de RPA não estão no banco).
-5. **Gateway de pagamento conectado** (Access Token + webhookSecret do Mercado Pago) se a cobrança for usada.
+**Bloqueadores (antes do primeiro cliente pagante)** — atualizado na sessão 07/10 (parte 4)
+1. ✅ **Chaves de IA** — deixou de ser "configurar uma chave global": agora cada workspace pode trazer a própria (Config → API Keys), e o pipeline realmente usa essa chave quando existe (`ProviderRouter.getProviderForWorkspace`, ver seção dedicada acima). `AI_MOCK_MODE=false` já ligado nesta instalação. Falta só colar a chave real do cliente na Integração (sem mudança de código).
+2. ✅ **`CREDENTIALS_KEY` própria e `JWT_SECRET` fora do código** — gerados, únicos por instalação, só no `.env` local; `docker-compose.yml` recusa subir sem eles.
+3. 🟡 **HTTPS + domínio + `PUBLIC_API_URL`** — domínio definido (`aihub.simplisoft.com.br`), scaffold pronto (`docker-compose.prod.yml` + Caddy com HTTPS automático). Falta alguém rodar isso no servidor real — não foi (e não podia ser) testado ponta a ponta daqui.
+4. ✅ **Backup do Postgres e do `storage/`** — `scripts/backup.sh` / `restore.sh`, testado.
+5. ⏸️ **Gateway de pagamento** — adiado por decisão do usuário (sem conta Mercado Pago ainda); baixa manual cobre o meio-tempo.
 
 **Importantes (primeiras semanas)**
 6. Fechamento de ciclo automático (hoje é botão; falta o job mensal).
@@ -113,7 +236,7 @@ Métricas da plataforma: contas, suspensas, usuários ativos, execuções 30d, f
 8. Recuperação de senha pelo próprio usuário (hoje só o superadmin redefine).
 9. Limite de taxa (rate limit) no login e nos webhooks públicos.
 10. Observabilidade: logs estruturados persistidos, alerta quando a fila para ou o worker cai.
-11. Testes automatizados no repositório (hoje as suítes vivem fora do projeto) e um `docker compose` de produção separado do de desenvolvimento.
+11. Testes automatizados no repositório (hoje as suítes vivem fora do projeto). ✅ `docker compose` de produção separado do de desenvolvimento já existe (`docker-compose.prod.yml`, ver item 3).
 
 **Desejáveis**
 12. Publicação direta em redes sociais (Instagram/LinkedIn) via API oficial, hoje coberta pelo canal Webhook.

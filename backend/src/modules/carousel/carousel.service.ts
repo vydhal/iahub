@@ -105,7 +105,7 @@ export async function generateScript(opts: {
 
   const brand = await prisma.brand.findFirst({ where: { workspaceId: opts.workspaceId }, include: { voices: true } });
   const model = resolveModel('Claude Opus 5', 'anthropic');
-  const provider = providerRouter.getProvider(model.provider);
+  const provider = await providerRouter.getProviderForWorkspace(model.provider, opts.workspaceId);
 
   const prompt = `Você é ROTEIRISTA DE CARROSSEL para Instagram/LinkedIn.
 Tema: "${opts.topic}"
@@ -167,7 +167,7 @@ export async function generateImagePrompt(opts: {
   }
 
   const model = resolveModel('Claude Sonnet 5', 'anthropic');
-  const provider = providerRouter.getProvider(model.provider);
+  const provider = await providerRouter.getProviderForWorkspace(model.provider, opts.workspaceId);
   const ask = `Escreva UM prompt de geração de imagem em inglês (60-90 palavras) para ilustrar este slide de carrossel.
 Conteúdo do slide: "${conteudo}". Tipo: ${opts.slide.layout}. Outros slides: "${opts.deckTitles.slice(0, 4).join(' / ')}".
 Estilo: ${opts.style}. Composição: ${opts.composition}. Formato: ${opts.format}.

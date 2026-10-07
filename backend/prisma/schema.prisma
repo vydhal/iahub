@@ -140,6 +140,8 @@ model Brand {
   targetAudience String?          @db.Text
   preferredWords String[]         @default([])
   bannedWords    String[]         @default([])
+  logoKey        String?          // arquivo em storage/brands/<workspaceId>/<brandId>/
+  logoMime       String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -292,6 +294,7 @@ model Campaign {
   contentType String?         @default("Campanha completa")
   format      String?         @default("1080 × 1080")
   status      CampaignStatus  @default(DRAFT)
+  isFavorite  Boolean         @default(false)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 

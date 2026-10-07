@@ -1,16 +1,33 @@
+import { createReadStream } from 'node:fs';
+import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../../config/prisma.js';
+import { extractPalette } from '../../shared/media/colorExtract.js';
 import { tenantOf } from '../../shared/tenancy/tenant.js';
 
 const brandInclude = { colors: true, voices: true, products: true, services: true } as const;
+
+export const BRANDS_DIR = path.resolve(process.cwd(), 'storage', 'brands');
+
+const LOGO_EXT: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+  'image/svg+xml': 'svg',
+};
+
+function present(b: any) {
+  return { ...b, logoUrl: b.logoKey ? `/api/brands/${b.id}/logo?v=${new Date(b.updatedAt).getTime()}` : null };
+}
 
 export async function brandRoutes(fastify: FastifyInstance) {
   const guard = { preHandler: fastify.moduleGuard('marcas') };
   fastify.get('/', guard, async (request, reply) => {
     const { workspaceId } = tenantOf(request);
     const brands = await prisma.brand.findMany({ where: { workspaceId }, include: brandInclude, orderBy: { createdAt: 'asc' } });
-    return reply.send(brands);
+    return reply.send(brands.map(present));
   });
 
   fastify.post('/', guard, async (request, reply) => {
@@ -51,7 +68,7 @@ export async function brandRoutes(fastify: FastifyInstance) {
       include: brandInclude,
     });
 
-    return reply.status(201).send(brand);
+    return reply.status(201).send(present(brand));
   });
 
   fastify.patch('/:id', guard, async (request, reply) => {
@@ -83,7 +100,7 @@ export async function brandRoutes(fastify: FastifyInstance) {
       include: brandInclude,
     });
 
-    return reply.send(brand);
+    return reply.send(present(brand));
   });
 
   fastify.delete('/:id', guard, async (request, reply) => {
@@ -92,6 +109,81 @@ export async function brandRoutes(fastify: FastifyInstance) {
     if (!existing) return reply.status(404).send({ message: 'Marca não encontrada' });
 
     await prisma.brand.delete({ where: { id } });
+    await rm(path.join(BRANDS_DIR, existing.workspaceId, id), { recursive: true, force: true });
     return reply.status(204).send();
+  });
+
+  // Upload da logo: salva o arquivo e já sugere a paleta extraída das cores dominantes da imagem
+  // (mesmo padrão de Looka/Canva Brand Kit/Genna — importa a logo, as cores saem prontas).
+  fastify.post('/:id/logo', guard, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { workspaceId } = tenantOf(request);
+    const existing = await prisma.brand.findFirst({ where: { id, workspaceId } });
+    if (!existing) return reply.status(404).send({ message: 'Marca não encontrada' });
+
+    const file = await (request as any).file({ limits: { fileSize: 4 * 1024 * 1024 } });
+    if (!file) return reply.status(400).send({ message: 'Envie um arquivo de imagem.' });
+    const ext = LOGO_EXT[file.mimetype];
+    if (!ext) return reply.status(400).send({ message: `Formato não suportado: ${file.mimetype}. Use PNG, JPG, WEBP ou SVG.` });
+
+    const buffer = await file.toBuffer();
+    const dir = path.join(BRANDS_DIR, workspaceId, id);
+    await mkdir(dir, { recursive: true });
+    const logoKey = `logo.${ext}`;
+    await writeFile(path.join(dir, logoKey), buffer);
+
+    // SVG não é um raster — não dá pra amostrar pixel. Extração de cor só para formatos bitmap.
+    let extractedColors: string[] | null = null;
+    if (ext !== 'svg') {
+      try {
+        extractedColors = await extractPalette(buffer, 5);
+      } catch (err: any) {
+        request.log.warn({ err }, 'Falha ao extrair paleta da logo');
+      }
+    }
+
+    const brand = await prisma.brand.update({
+      where: { id },
+      data: {
+        logoKey,
+        logoMime: file.mimetype,
+        ...(extractedColors && extractedColors.length ? { colors: { deleteMany: {}, create: extractedColors.map((hex) => ({ hex })) } } : {}),
+      },
+      include: brandInclude,
+    });
+
+    return reply.send({ ...present(brand), paletteExtracted: !!extractedColors?.length });
+  });
+
+  fastify.get('/:id/logo', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { token } = request.query as { token?: string };
+    let userId: string;
+    try {
+      userId = (fastify.jwt.verify(token || '') as any).id;
+    } catch {
+      return reply.status(401).send({ message: 'Token não fornecido ou inválido.' });
+    }
+    const brand = await prisma.brand.findFirst({ where: { id, workspace: { members: { some: { userId } } } } });
+    if (!brand?.logoKey) return reply.status(404).send({ message: 'Sem logo cadastrada' });
+
+    const full = path.join(BRANDS_DIR, brand.workspaceId, id, brand.logoKey);
+    try {
+      await stat(full);
+    } catch {
+      return reply.status(404).send({ message: 'Arquivo da logo não encontrado' });
+    }
+    return reply.type(brand.logoMime || 'image/png').header('Cache-Control', 'private, max-age=300').send(createReadStream(full));
+  });
+
+  fastify.delete('/:id/logo', guard, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { workspaceId } = tenantOf(request);
+    const existing = await prisma.brand.findFirst({ where: { id, workspaceId } });
+    if (!existing) return reply.status(404).send({ message: 'Marca não encontrada' });
+
+    await rm(path.join(BRANDS_DIR, workspaceId, id), { recursive: true, force: true });
+    const brand = await prisma.brand.update({ where: { id }, data: { logoKey: null, logoMime: null }, include: brandInclude });
+    return reply.send(present(brand));
   });
 }

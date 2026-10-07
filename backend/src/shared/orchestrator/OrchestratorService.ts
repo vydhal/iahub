@@ -1,6 +1,21 @@
 import { z } from 'zod';
 import { prisma } from '../../config/prisma.js';
+import { saveBuffer } from '../../modules/media/media.routes.js';
 import { providerRouter } from '../ai/ProviderRouter.js';
+
+/**
+ * As URLs que a OpenAI devolve para imagens geradas expiram em cerca de 1h. Baixamos o
+ * conteúdo e salvamos como MediaAsset de verdade (mesmo armazenamento da Biblioteca), em vez
+ * de guardar um link que vira 404 — e assim a peça também aparece na Biblioteca.
+ */
+async function persistGeneratedImage(workspaceId: string, remoteUrl: string, name: string) {
+  const res = await fetch(remoteUrl);
+  if (!res.ok) throw new Error(`Falha ao baixar imagem gerada (HTTP ${res.status})`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const mimeType = res.headers.get('content-type')?.split(';')[0] || 'image/png';
+  const asset = await saveBuffer(workspaceId, buffer, mimeType, name, 'ai');
+  return { url: `/api/media/${asset.id}/file`, storageKey: asset.storageKey, mimeType: asset.mimeType };
+}
 
 // Schemas Zod de Validação de Output Estruturado de cada Agente
 
@@ -100,7 +115,7 @@ export class OrchestratorService {
       progressCallback?.(1, 'Estratégia');
       await this.updateExecutionStep(execution.id, 1, 'Estratégia', 'RUNNING');
 
-      const provider = providerRouter.getProvider('openai');
+      const provider = await providerRouter.getProviderForWorkspace('openai', campaign.workspaceId);
       const strategyPrompt = `
 Você é o Agente ESTRATEGISTA do AI Creative Studio.
 Analise o briefing e monte a estratégia da campanha:
@@ -126,7 +141,7 @@ Monte o output em JSON com público, dor central, ângulo único, prova e estág
       progressCallback?.(2, 'Copy');
       await this.updateExecutionStep(execution.id, 2, 'Copy', 'RUNNING');
 
-      const copyProvider = providerRouter.getProvider('anthropic');
+      const copyProvider = await providerRouter.getProviderForWorkspace('anthropic', campaign.workspaceId);
       const copyPrompt = `
 Você é o Agente COPYWRITER do AI Creative Studio.
 Com base no briefing e na estratégia abaixo, escreva as peças de copy:
@@ -183,13 +198,17 @@ Defina conceito visual, composição com respiro para texto, iluminação, enqua
       progressCallback?.(4, 'Geração visual');
       await this.updateExecutionStep(execution.id, 4, 'Geração visual', 'RUNNING');
 
-      const imgProvider = providerRouter.getProvider('openai');
+      const imgProvider = await providerRouter.getProviderForWorkspace('openai', campaign.workspaceId);
       const imgRes = await imgProvider.generateImage({
         prompt: context.artDirection.imagePrompt,
         count: campaign.workspace?.defaultVariationCount || 4,
       });
 
-      context.images = imgRes.data;
+      // Baixa e persiste cada imagem como MediaAsset de verdade (ver persistGeneratedImage) —
+      // a URL da OpenAI expira em ~1h e sumiria da peça salva.
+      context.images = await Promise.all(
+        imgRes.data.map((url, i) => persistGeneratedImage(campaign.workspaceId, url, `${context.copy.headline.slice(0, 40)} - ${i + 1}`)),
+      );
 
       await this.completeExecutionStep(execution.id, 4, 'Geração visual', 'GPT Image', imgRes);
 
@@ -231,10 +250,12 @@ Direção de arte: "${context.artDirection.concept}"
       progressCallback?.(6, 'Refinamento');
       await this.updateExecutionStep(execution.id, 6, 'Refinamento', 'RUNNING');
 
-      await this.completeExecutionStep(execution.id, 6, 'Refinamento', 'Claude Sonnet 4', {
-        tokensInput: 100,
-        tokensOutput: 100,
-        estimatedCost: 0.001,
+      // Nenhum modelo é chamado nesta etapa hoje (o ajuste fino acontece via refineCreativeVersion,
+      // sob demanda, depois que o usuário vê o resultado) — não fatura tokens/custo que não ocorreram.
+      await this.completeExecutionStep(execution.id, 6, 'Refinamento', 'Sistema', {
+        tokensInput: 0,
+        tokensOutput: 0,
+        estimatedCost: 0,
       });
 
       // ----------------------------------------------------
@@ -275,10 +296,10 @@ Direção de arte: "${context.artDirection.concept}"
           issues: context.review?.issues || [],
           recommendations: context.review?.recommendations || [],
           assets: {
-            create: context.images.map((url: string) => ({
-              url,
-              storageKey: `assets/${creative.id}/${Date.now()}.png`,
-              mimeType: 'image/png',
+            create: context.images.map((img: { url: string; storageKey: string; mimeType: string }) => ({
+              url: img.url,
+              storageKey: img.storageKey,
+              mimeType: img.mimeType,
             })),
           },
         },
@@ -324,7 +345,7 @@ Direção de arte: "${context.artDirection.concept}"
   async refineCreativeVersion(creativeVersionId: string, userPrompt: string) {
     const previousVersion = await prisma.creativeVersion.findUnique({
       where: { id: creativeVersionId },
-      include: { creative: true },
+      include: { creative: { include: { campaign: true } } },
     });
 
     if (!previousVersion) throw new Error('Versão anterior não encontrada');
@@ -339,7 +360,7 @@ Direção de arte: "${context.artDirection.concept}"
       },
     });
 
-    const provider = providerRouter.getProvider('anthropic');
+    const provider = await providerRouter.getProviderForWorkspace('anthropic', previousVersion.creative.campaign.workspaceId);
     const prompt = `
 O usuário solicitou um refinamento para a peça visual:
 Versão Anterior: V${previousVersion.versionNumber}
@@ -355,6 +376,22 @@ Gere a versão atualizada com a nova headline, CTA e novos ajustes.
     });
     const copyData = res.data as z.infer<typeof CopyOutputSchema>;
 
+    // Reavalia de verdade com o Crítico em cima do novo copy, em vez de inventar uma melhora
+    // fixa (+4/+5) sobre a nota anterior — a pontuação da nova versão reflete o que ela
+    // realmente entregou, podendo inclusive piorar em alguma rubrica.
+    const criticPrompt = `
+Você é o Agente CRÍTICO de design e comunicação.
+Avalie esta NOVA versão da peça (resultado de um pedido de refinamento) de 0 a 100 nas rubricas (Copy, Composição, Hierarquia, Contraste, Marca) e forneça pontos fortes, problemas e recomendações:
+Headline: "${copyData.headline}"
+Subtítulo: "${copyData.subheadline}"
+Direção de arte: "${previousVersion.concept}"
+Pedido de refinamento atendido: "${userPrompt}"
+`;
+    const criticRes = await provider.generateStructured(criticPrompt, ReviewOutputSchema, {
+      temperature: 0.2,
+    });
+    const review = criticRes.data;
+
     // Gera nova versão sem sobrescrever V1
     const newVersion = await prisma.creativeVersion.create({
       data: {
@@ -368,15 +405,15 @@ Gere a versão atualizada com a nova headline, CTA e novos ajustes.
         visualDirection: previousVersion.visualDirection,
         imagePrompt: previousVersion.imagePrompt,
         concept: previousVersion.concept,
-        overallScore: Math.min(100, (previousVersion.overallScore || 80) + 4),
-        copyScore: Math.min(100, (previousVersion.copyScore || 80) + 5),
-        compositionScore: previousVersion.compositionScore,
-        hierarchyScore: previousVersion.hierarchyScore,
-        contrastScore: previousVersion.contrastScore,
-        brandScore: previousVersion.brandScore,
-        strengths: [...previousVersion.strengths, 'Ajuste aplicado com sucesso'],
-        issues: previousVersion.issues,
-        recommendations: previousVersion.recommendations,
+        overallScore: review.overallScore,
+        copyScore: review.copyScore,
+        compositionScore: review.compositionScore,
+        hierarchyScore: review.hierarchyScore,
+        contrastScore: review.contrastScore,
+        brandScore: review.brandScore,
+        strengths: review.strengths,
+        issues: review.issues,
+        recommendations: review.recommendations,
       },
     });
 

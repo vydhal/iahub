@@ -14,7 +14,10 @@ const envBool = (fallback: boolean) =>
 const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  JWT_SECRET: z.string().default('super_secret_jwt_key_simplisoft_pabllo_vittar_2026'),
+  JWT_SECRET: z
+    .string()
+    .min(32, 'JWT_SECRET precisa ter pelo menos 32 caracteres — gere um valor forte e único (ex: openssl rand -base64 48).')
+    .default('super_secret_jwt_key_simplisoft_pabllo_vittar_2026'),
   DATABASE_URL: z.string(),
   REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z.coerce.number().default(6379),

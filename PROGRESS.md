@@ -1,7 +1,7 @@
 # 📌 DOCUMENTAÇÃO DE PROGRESSO E METAS — AI CREATIVE STUDIO FULL-STACK
 
 > **Status Geral:** Backend e frontend genuinamente conectados e validados ponta a ponta. Ver `HANDOVER_DOCUMENTATION.md` para o detalhamento técnico completo desta sessão.
-> **Data:** 07/10/2026 (Editor de posts, Cobrança, Superadmin/módulos, Agendador, identidade e diálogos — FASES 49–62). Detalhes em `HANDOVER_DOCUMENTATION.md`, seção "SESSÃO 07/10/2026".
+> **Data:** 07/10/2026, noite (Auditoria completa das demais rotas — FASE 69). Sessões anteriores no mesmo dia: Editor de posts: chave de IA honesta (FASE 68); Logo da marca + extração automática de paleta (FASE 67); Bloqueadores de produção (FASES 63–66); Editor de posts, Cobrança, Superadmin/módulos, Agendador, identidade e diálogos (FASES 49–62). Detalhes em `HANDOVER_DOCUMENTATION.md`.
 
 ---
 
@@ -62,6 +62,13 @@
 | **FASE 60** | **Tela de login refeita** | 100% | 🟢 Concluído | Layout novo com identidade, abas Entrar/Criar conta, senha com olho para mostrar/ocultar e envio pelo Enter. |
 | **FASE 61** | **Diálogos do sistema** | 100% | 🟢 Concluído | 19 alert/confirm/prompt do navegador substituídos por um componente com validação, tons, campos de senha e confirmação por digitação. |
 | **FASE 62** | **Exclusão de conta pelo superadmin** | 100% | 🟢 Concluído | Exige o nome exato, desagenda agentes e publicações, audita o conteúdo e apaga workspace, usuários exclusivos e mídia em disco. |
+| **FASE 63** | **Chave de IA por workspace** | 100% | 🟢 Concluído | A Integração cadastrada em Config → API Keys agora é realmente usada pelo pipeline (`ProviderRouter.getProviderForWorkspace`), em vez de só salvar no banco sem efeito. Cai para a chave global da plataforma quando o workspace não tem a própria. Validado com chamada real à API da Anthropic (401 de autenticação, não mock). |
+| **FASE 64** | **Segredos próprios da instalação** | 100% | 🟢 Concluído | `JWT_SECRET`/`CREDENTIALS_KEY` gerados e únicos, fora do `docker-compose.yml` versionado; compose recusa subir sem eles (`${VAR:?...}`). |
+| **FASE 65** | **Backup e restore** | 100% | 🟢 Concluído | `scripts/backup.sh` (Postgres + storage) e `scripts/restore.sh`, testados de verdade. |
+| **FASE 66** | **Scaffold de produção (`aihub.simplisoft.com.br`)** | 100% | 🟢 Concluído | `docker-compose.prod.yml` + Caddy com HTTPS automático (Let's Encrypt), reverse proxy `/api` → backend. Falta alguém aplicar no servidor real. |
+| **FASE 67** | **Logo da marca + extração automática de paleta** | 100% | 🟢 Concluído | Upload de logo por marca (`POST /api/brands/:id/logo`) com extração real de cores dominantes via `sharp` (quantização + distância mínima entre cores), substituindo a paleta automaticamente — padrão Looka/Canva Brand Kit/Genna pedido pelo usuário. Testado com imagem de cores conhecidas (extração bateu exatamente) e pelo navegador (upload real, paleta atualizada ao vivo, preview na lista e no detalhe). |
+| **FASE 68** | **Editor de posts: diagnóstico "mockado" e correção da chave de IA** | 100% | 🟢 Concluído | Investigação mostrou que o Editor de posts (roteiro/IA, prompt de imagem, geração de imagem, salvar/abrir projeto, PNG/ZIP, Salvar na Biblioteca) já chamava APIs reais — nada client-side fake. A causa real do "não funciona": o seed plantava integrações OpenAI/Anthropic com status "CONECTADO" e uma chave mascarada literal (`sk-ant-••••••7c21`) que nunca foi uma chave de verdade, então toda chamada de IA falhava (401) sem aviso claro. Corrigido: seed agora só marca "CONECTADO" quando existe chave real no `.env` (criptografada), senão mostra "NÃO CONFIGURADO" de verdade; `/carousel/script`, `/carousel/image-prompt` e `/carousel/image` agora checam `hasUsableKey()` antes de chamar o provedor e devolvem uma mensagem 422 acionável ("cadastre sua chave em Configurações → Integrações") em vez de vazar o erro cru da Anthropic/OpenAI. Validado ao vivo: (1) mensagem honesta aparece sem chave configurada; (2) ao cadastrar uma chave própria do workspace pela tela de Integrações, o roteiro passa a tentar a API real com a chave do cliente (confirmado pelo 401 vindo da própria Anthropic, não mais o 422 de "não configurado"); (3) salvar/abrir projeto, exportar PNG e listar em "Meus carrosséis" testados ponta a ponta com sucesso. |
+| **FASE 69** | **Auditoria completa: Dashboard, Projetos, Templates, Campanhas, Biblioteca, Aprovações, Credenciais, Execuções** | 100% | 🟢 Concluído | 3 agentes de investigação em paralelo auditaram as rotas restantes. Dashboard/Aprovações/Credenciais/Execuções vieram 100% reais, sem achados. Achado mais grave: criar uma campanha sem chave de IA usável fingia sucesso (progresso falso via `setInterval` + "Campanha pronta" + tela de resultado com conteúdo de demonstração hardcoded) em vez de mostrar o erro real — corrigido removendo todo o fallback falso e fazendo `ProviderRouter.getProviderForWorkspace` recusar com mensagem clara quando não há nenhuma chave usável (workspace nem global), ao invés de estourar um 401 cru da Anthropic/OpenAI no meio do workflow. Também corrigidos: nota de refinamento fabricada (+4/+5 sem reavaliar — agora chama o Crítico de verdade de novo); telemetria fake da etapa "Refinamento" do workflow (zerada); imagens de campanha que nunca eram salvas em disco (URL da OpenAI expirava em ~1h) — agora baixadas e persistidas como `MediaAsset` real, aparecendo na Biblioteca; botões "Regenerar/Duplicar/Editar/Usar como final/sino de notificações" que só fingiam ação — agora avisam honestamente "ainda não disponível"; filtro "Favoritos" que por engano mostrava campanhas com status "Falhou" — implementado `Campaign.isFavorite` de verdade (campo novo + endpoint + estrela no card); tela de Biblioteca não carregava sozinha, busca não fazia nada, chips de filtro sem categoria real por trás — corrigidos com dados reais e removidas as categorias sem base ("Copies"/"Prompts"/"Templates"/"Favoritos" da Biblioteca). A aba "Templates" do menu era 100% decorativa (mesma tela de Projetos, sem nenhuma entidade de template no banco) — perguntado ao usuário, que optou por remover a aba em vez de construir a funcionalidade agora. Tudo validado ao vivo com Playwright; `npx tsc --noEmit` = 0 erros. |
 
 ---
 
@@ -79,5 +86,21 @@ Depois desses dois fixes de causa raiz, a sessão seguiu implementando de fato:
 Toda mudança foi validada com testes reais via Playwright (não só leitura de código) — login, CRUD via UI, campanha do zero até resultado, refinamento gerando V2, ajuste de preferência mudando comportamento real do orquestrador. `npx tsc --noEmit` = 0 erros ao final.
 
 **Decisão do usuário:** pausar o projeto aqui. Retomada a definir.
+
+---
+
+## 🛠️ RESUMO DA SESSÃO DE HOJE (07/10/2026, tarde)
+
+Retomada após um mês: a outra máquina tinha commitado um salto enorme (Agent Operations Center, Editor de posts, Cobrança, Superadmin, Agendador — 25 mil linhas). Revisei código por código (não só a documentação) os pontos mais sensíveis — tenancy, criptografia, HMAC do Mercado Pago, SSRF do RPA, moduleGuard — e bateu tudo com o que estava escrito. Subi o ambiente do zero (volume novo nesta máquina) e validei login de cliente e de superadmin.
+
+Usuário pediu pra focar nos bloqueadores de produção antes de ir pro MCP, e deixar a solução local rodando pra testar. Fechados nesta sessão:
+- **Chave de IA por workspace** — o pedido explícito foi "não quero hardcoded, quero que o usuário adicione a própria chave no painel". Achei que a tela já existia mas estava desconectada do pipeline real (mesmo padrão de lacuna de sessões anteriores) e conectei de verdade: `ProviderRouter.getProviderForWorkspace` resolve a chave do workspace cadastrada em Integrações, descriptografa e usa; sem ela, cai pra chave global da plataforma. Testado com chamada real à API da Anthropic.
+- Segredos (`JWT_SECRET`/`CREDENTIALS_KEY`) próprios desta instalação, fora do arquivo versionado.
+- Backup/restore do banco e do storage, testados.
+- Scaffold de produção para `aihub.simplisoft.com.br` (Caddy + HTTPS automático) — pronto pra aplicar no servidor real, que eu não tenho acesso daqui.
+
+Mercado Pago ficou adiado (usuário ainda não tem conta). `npx tsc --noEmit` = 0 erros ao final. Ambiente local rodando: `http://localhost:8080` (cliente: vidal@simplisoft.com.br / 123456 · superadmin: admin@simplisoft.com.br / simplisoft123), `AI_MOCK_MODE=false`.
+
+**Próximo passo combinado:** MCP (`ExecutionProvider` alternativo — Cowork/Claude Code).
 
 ---

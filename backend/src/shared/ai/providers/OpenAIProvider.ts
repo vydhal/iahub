@@ -7,9 +7,11 @@ export class OpenAIProvider implements AIProvider {
   name = 'OpenAIProvider';
   private client: OpenAI | null = null;
 
-  constructor() {
-    if (env.OPENAI_API_KEY && !env.AI_MOCK_MODE) {
-      this.client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  /** `apiKeyOverride`: chave própria do workspace (Integrações). Sem ela, usa a chave global da plataforma. */
+  constructor(apiKeyOverride?: string) {
+    const apiKey = apiKeyOverride || env.OPENAI_API_KEY;
+    if (apiKey && !env.AI_MOCK_MODE) {
+      this.client = new OpenAI({ apiKey });
     }
   }
 

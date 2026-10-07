@@ -1,0 +1,90 @@
+# Produção — aihub.simplisoft.com.br
+# Uso no servidor:
+#   1) Copie .env.example para .env e preencha os valores reais (JWT_SECRET, CREDENTIALS_KEY,
+#      DATABASE_URL com senha forte, chaves de IA se a plataforma for ter uma própria, etc).
+#   2) DNS do domínio apontando para este servidor (A/AAAA), portas 80 e 443 liberadas.
+#   3) docker compose -f docker-compose.prod.yml up -d --build
+# O Caddy emite e renova o certificado HTTPS sozinho (Let's Encrypt) na primeira subida.
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai_creative_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: aicreativestudio
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # Sem porta publicada: só a rede interna do compose acessa o banco em produção.
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai_creative_redis
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        WITH_BROWSER: "true"
+    container_name: ai_creative_backend
+    restart: always
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/aicreativestudio?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:?defina JWT_SECRET no .env}
+      - AI_MOCK_MODE=${AI_MOCK_MODE:-false}
+      - CREDENTIALS_KEY=${CREDENTIALS_KEY:?defina CREDENTIALS_KEY no .env}
+      - RUN_WORKERS=true
+      - ALLOW_PRIVATE_NETWORK=false
+      - PUBLIC_API_URL=https://aihub.simplisoft.com.br
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    # Sem bind mount do código (imagem imutável) nem polling — isso é só para hot reload em dev.
+    # Importante: o schema do banco NÃO é aplicado automaticamente aqui de propósito — rodar
+    # `prisma db push --accept-data-loss` sozinho em todo restart arriscaria apagar dado real sem
+    # ninguém perceber. Depois do primeiro `up`, aplique manualmente (revisando o aviso de cada vez):
+    #   docker compose -f docker-compose.prod.yml exec backend npx prisma db push
+    command: sh -c "npm run build && npm start"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: ai_creative_web
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

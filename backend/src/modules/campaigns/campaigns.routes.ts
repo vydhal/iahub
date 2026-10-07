@@ -98,6 +98,16 @@ export async function campaignRoutes(fastify: FastifyInstance) {
     });
   });
 
+  // Favoritar/desfavoritar campanha
+  fastify.patch('/:id/favorite', { preHandler: fastify.moduleGuard('campanhas') }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { isFavorite } = z.object({ isFavorite: z.boolean() }).parse(request.body);
+    const owned = await prisma.campaign.findFirst({ where: { id, workspaceId: tenantOf(request).workspaceId }, select: { id: true } });
+    if (!owned) return reply.status(404).send({ message: 'Campanha não encontrada' });
+    const campaign = await prisma.campaign.update({ where: { id }, data: { isFavorite } });
+    return reply.send(campaign);
+  });
+
   // Executa o workflow de forma síncrona/direta (para testes e resposta rápida)
   fastify.post('/:id/run', { preHandler: fastify.moduleGuard('campanhas') }, async (request, reply) => {
     const { id } = request.params as { id: string };

@@ -601,6 +601,7 @@ a:hover{color:var(--accent)}
           <div style="padding:14px 15px">
             <div style="display:flex;align-items:center;gap:8px">
               <span style="flex:1;font-size:13px;font-weight:600">{{ p.name }}</span>
+              <button onClick="{{ p.toggleFav }}" title="Favoritar" style="border:none;background:none;cursor:pointer;font-size:14px;color:{{ p.favColor }};padding:0;line-height:1">{{ p.favChar }}</button>
               <span style="{{ p.badge }}">{{ p.status }}</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;margin-top:9px;font:400 10.5px/1 'JetBrains Mono',monospace;color:var(--ink3)">
@@ -621,7 +622,7 @@ a:hover{color:var(--accent)}
     <div class="stack" style="display:flex;gap:10px;margin-bottom:20px">
       <div style="display:flex;align-items:center;gap:8px;flex:1;max-width:360px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
-        <input placeholder="Buscar por tag, marca, prompt…" style="flex:1;border:none;background:none;outline:none;font-size:12.5px;color:var(--ink)">
+        <input value="{{ libSearch }}" onChange="{{ setLibSearch }}" placeholder="Buscar por nome ou tag…" style="flex:1;border:none;background:none;outline:none;font-size:12.5px;color:var(--ink)">
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:5px">
         <sc-for list="{{ libFilters }}" as="f" hint-placeholder-count="6">
@@ -640,9 +641,14 @@ a:hover{color:var(--accent)}
                 <span style="padding:3px 7px;font:400 9.5px/1.3 'JetBrains Mono',monospace;color:var(--ink3);border:1px solid var(--border);border-radius:5px">{{ t }}</span>
               </sc-for>
             </div>
+            <div style="display:flex;gap:6px;margin-top:10px">
+              <button onClick="{{ i.open }}" style="flex:1;padding:7px;font-size:11px;font-weight:600;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer">Abrir</button>
+              <sc-if value="{{ i.canDelete }}"><button onClick="{{ i.remove }}" style="padding:7px 10px;font-size:11px;font-weight:600;color:var(--err);background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer">Excluir</button></sc-if>
+            </div>
           </div>
         </div>
       </sc-for>
+      <sc-if value="{{ libEmpty }}"><div style="padding:16px;font-size:12.5px;color:var(--ink3)">Nenhum item encontrado.</div></sc-if>
     </div>
   </div>
   </sc-if>
@@ -668,7 +674,7 @@ a:hover{color:var(--accent)}
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px">
         <div class="stack" style="display:flex;align-items:center;gap:16px;padding-bottom:22px;border-bottom:1px solid var(--border)">
-          <div style="width:52px;height:52px;border-radius:14px;background:{{ brandDetail.color }};color:#fff;display:grid;place-items:center;font-size:19px;font-weight:700">{{ brandDetail.initial }}</div>
+          <div style="{{ brandDetail.mark }}">{{ brandDetail.initial }}</div>
           <div style="flex:1">
             <div style="font-size:19px;font-weight:600;letter-spacing:-.02em">{{ brandDetail.name }}</div>
             <div style="font-size:12px;color:var(--ink3);margin-top:3px">{{ brandDetail.sub }}</div>
@@ -1956,6 +1962,26 @@ a:hover{color:var(--accent)}
 
     <div style="display:flex;flex-direction:column;gap:18px">
       <div>
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">Logo <span style="font:400 10px/1 'JetBrains Mono',monospace;color:var(--ink3)">PNG, JPG, WEBP ou SVG</span></div>
+        <sc-if value="{{ bIsSavedBrand }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--surface2);border-radius:12px">
+            <div style="{{ bLogoPreviewStyle }}"></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:11.5px;color:var(--ink3)">A logo alimenta a paleta de cores automaticamente ao enviar.</div>
+              <div style="display:flex;gap:6px">
+                <button onClick="{{ uploadBrandLogo }}" style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:11.5px;font-weight:600;color:var(--ink);cursor:pointer">{{ bLogoLabel }}</button>
+                <sc-if value="{{ bCanRemoveLogo }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ removeBrandLogo }}" style="padding:8px 10px;background:none;border:1px solid var(--border);border-radius:8px;font-size:11.5px;color:var(--err);cursor:pointer">✕</button>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ bNotSavedYet }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:14px;background:var(--surface2);border-radius:12px;font-size:11.5px;color:var(--ink3);line-height:1.5">Salve a marca primeiro — depois é só voltar aqui em "Editar marca" para enviar a logo e já sair com a paleta sugerida.</div>
+        </sc-if>
+      </div>
+      <div>
         <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">Nome da marca</div>
         <input value="{{ bName }}" onChange="{{ setBName }}" placeholder="Ex: Simplisoft" style="width:100%;padding:10px 12px;font-size:13px;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:10px;outline:none">
       </div>
@@ -2567,8 +2593,7 @@ const I = {
 };
 const NAV = [
   ["dashboard","Dashboard",I.dash,""],["criar","Criar",I.spark,""],["carrossel","Editor de posts",I.carousel,""],["agendador","Agendador",I.calendar,""],["projetos","Projetos",I.folder,"18"],
-  ["campanhas","Campanhas",I.megaphone,"6"],["biblioteca","Biblioteca",I.library,""],["marcas","Marcas",I.brand,"3"],
-  ["templates","Templates",I.template,""]
+  ["campanhas","Campanhas",I.megaphone,"6"],["biblioteca","Biblioteca",I.library,""],["marcas","Marcas",I.brand,"3"]
 ];
 const NAV2 = [["admin","Plataforma",I.shield],["agentes","Agentes de IA",I.agents],["execucoes","Execuções",I.refresh],["aprovacoes","Aprovações",I.star],["credenciais","Credenciais",I.plug],["integracoes","Integrações",I.plug],["cobranca","Cobrança",I.ad],["config","Configurações",I.cog]];
 // "Plataforma" só existe para o superadmin da Simplisoft
@@ -2736,7 +2761,7 @@ const CAR_TEMPLATES = [
 class Component extends DCLogic {
   state = {
     theme:"light", route:"dashboard", tab:"copy", cmdOpen:false, drawer:null, toastMsg:"",
-    tech:false, step:3, projFilter:"Todos", libFilter:"Tudo", cfgTab:"Perfil", version:"V4",
+    tech:false, step:3, projFilter:"Todos", libFilter:"Tudo", libSearch:"", cfgTab:"Perfil", version:"V4",
     brief:"", refine:"", type:"Campanha completa", goal:"Gerar leads", tone:"Profissional",
     fmt:"1080 × 1080", brandSel:"Simplisoft", audience:"Pequenas empresas · 5 a 50 funcionários",
     favs:{2:true},
@@ -2811,7 +2836,7 @@ class Component extends DCLogic {
     const s = this.state;
     // O superadmin administra contas; ele não pertence a nenhuma, então não navega no produto do cliente.
     if(s.user && s.user.role === "SUPERADMIN") return route === "admin" || route === "config";
-    const MAP = { criar:"campanhas", projetos:"campanhas", campanhas:"campanhas", templates:"campanhas",
+    const MAP = { criar:"campanhas", projetos:"campanhas", campanhas:"campanhas",
       biblioteca:"biblioteca", marcas:"marcas", carrossel:"carrossel", agendador:"agendador",
       agentes:"agentes", execucoes:"agentes", aprovacoes:"agentes", integracoes:"integracoes", cobranca:"cobranca" };
     if(route === "credenciais") return this.hasModule("agentes") || this.hasModule("agendador") || this.hasModule("cobranca");
@@ -2863,6 +2888,15 @@ class Component extends DCLogic {
     client.getCampaign(id)
       .then(campaign => this.setState({ route:"resultado", tab:"copy", activeCampaign: campaign }))
       .catch(()=> this.setState({ route:"resultado", tab:"copy" }));
+  }
+  toggleCampaignFavorite(id, isFavorite){
+    const client = window.apiClient; if(!client) return;
+    const list = this.state.campaignsList.map(c=>c.id===id?{...c, isFavorite}:c);
+    this.setState({ campaignsList:list });
+    client.setCampaignFavorite(id, isFavorite).catch(err=>{
+      this.setState({ campaignsList:this.state.campaignsList.map(c=>c.id===id?{...c, isFavorite:!isFavorite}:c) });
+      this.flash(err.message || "Não foi possível favoritar");
+    });
   }
   doLogin(){
     this.setState({ authLoading: true, authError: "" });
@@ -2918,45 +2952,39 @@ class Component extends DCLogic {
   componentWillUnmount(){ document.removeEventListener("keydown", this.onKey); clearInterval(this.t); clearInterval(this.pollTimer); }
   runFlow(){
     clearInterval(this.t);
-    this.setState({route:"workflow", step:0});
     const client = window.apiClient;
-    if (client) {
-      client.createCampaign({
-        name: this.state.brief ? this.state.brief.slice(0, 60) : undefined,
-        description: this.state.brief || "Campanha Internet Empresarial",
-        contentType: this.state.type,
-        objective: this.state.goal,
-        audience: this.state.audience,
-        brandName: this.state.brandSel,
-        tone: this.state.tone,
-        format: this.state.fmt
-      }).then(res => {
-        const campaignId = res.campaign.id;
-        client.streamWorkflow(campaignId, (stepNumber) => {
-          this.setState({ step: stepNumber });
-        }, () => {
-          this.flash("Campanha pronta · 4 variações geradas com IA");
-          client.getCampaign(campaignId).then(campaign => {
-            this.setState({ route: "resultado", tab: "copy", step: 6, activeCampaign: campaign });
-          }).catch(() => {
-            this.setState({ route: "resultado", tab: "copy", step: 6 });
-          });
-          this.loadCampaigns();
-        }, (err) => console.error("Erro no SSE:", err));
-      }).catch(() => {
-        this.t = setInterval(()=>{
-          const s = this.state.step;
-          if(s>=6){ clearInterval(this.t); this.setState({route:"resultado", tab:"copy"}); this.flash("Campanha pronta · 4 variações geradas"); }
-          else this.setState({step:s+1});
-        }, 1100);
+    if (!client) { this.flash("Sem conexão com o servidor"); return; }
+    this.setState({route:"workflow", step:0});
+    client.createCampaign({
+      name: this.state.brief ? this.state.brief.slice(0, 60) : undefined,
+      description: this.state.brief || "Campanha Internet Empresarial",
+      contentType: this.state.type,
+      objective: this.state.goal,
+      audience: this.state.audience,
+      brandName: this.state.brandSel,
+      tone: this.state.tone,
+      format: this.state.fmt
+    }).then(res => {
+      const campaignId = res.campaign.id;
+      client.streamWorkflow(campaignId, (stepNumber) => {
+        this.setState({ step: stepNumber });
+      }, () => {
+        this.flash("Campanha pronta · 4 variações geradas com IA");
+        client.getCampaign(campaignId).then(campaign => {
+          this.setState({ route: "resultado", tab: "copy", step: 6, activeCampaign: campaign });
+        }).catch(() => {
+          this.setState({ route: "resultado", tab: "copy", step: 6 });
+        });
+        this.loadCampaigns();
+      }, (err) => {
+        const msg = typeof err === "string" ? err : "A geração foi interrompida (conexão perdida com o servidor).";
+        this.setState({route:"criar"});
+        this.flash(msg);
       });
-    } else {
-      this.t = setInterval(()=>{
-        const s = this.state.step;
-        if(s>=6){ clearInterval(this.t); this.setState({route:"resultado", tab:"copy"}); this.flash("Campanha pronta · 4 variações geradas"); }
-        else this.setState({step:s+1});
-      }, 1100);
-    }
+    }).catch(err => {
+      this.setState({route:"criar"});
+      this.flash(err.message || "Não foi possível criar a campanha");
+    });
   }
   flash(m){ this.setState({toastMsg:m}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toastMsg:""}),2400); }
   go(r){ return ()=>{ this.setState({route:r, cmdOpen:false}); this.onRoute(r); }; }
@@ -3043,6 +3071,7 @@ class Component extends DCLogic {
     const b = (this.state.brandsList||[]).find(x=>x.name===this.state.brandSel) || (this.state.brandsList||[])[0];
     if(!b){ this.newBrand(); return; }
     this.setState({editBrand:b.id, draft:{
+      id:b.id, logoUrl:b.logoUrl||null,
       name:b.name, sector:b.sector, desc:b.description||"", audience:b.targetAudience||"",
       colorsStr:(b.colors||[]).map(c=>c.hex).join(", "),
       productsStr:(b.products||[]).map(p=>p.name).join(", "),
@@ -3050,6 +3079,37 @@ class Component extends DCLogic {
       preferredStr:(b.preferredWords||[]).join(", "),
       bannedStr:(b.bannedWords||[]).join(", ")
     }});
+  }
+  uploadBrandLogo(){
+    const api = window.apiClient; if(!api) return;
+    const id = this.state.editBrand;
+    if(!id || id==="new"){ this.flash("Salve a marca antes de enviar a logo"); return; }
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = "image/png,image/jpeg,image/webp,image/svg+xml";
+    input.onchange = () => {
+      const file = input.files && input.files[0]; if(!file) return;
+      api.uploadBrandLogo(id, file)
+        .then(saved=>{
+          const list = this.state.brandsList.map(b=>b.id===saved.id?saved:b);
+          this.setState({ brandsList:list, draft:{...this.state.draft, logoUrl:saved.logoUrl, colorsStr:(saved.colors||[]).map(c=>c.hex).join(", ")} });
+          this.flash(saved.paletteExtracted ? "Logo enviada · cores extraídas automaticamente" : "Logo enviada");
+        })
+        .catch(err=>this.flash(err.message || "Erro ao enviar a logo"));
+    };
+    input.click();
+  }
+  removeBrandLogo(){
+    const api = window.apiClient; if(!api) return;
+    const id = this.state.editBrand;
+    if(!id || id==="new") return;
+    this.confirmDialog("Remover logo", "A marca volta a usar a inicial do nome como ícone. As cores já salvas não são apagadas.", { tone:"warn", confirmLabel:"Remover" }).then(ok=>{
+      if(!ok) return;
+      api.deleteBrandLogo(id).then(saved=>{
+        const list = this.state.brandsList.map(b=>b.id===saved.id?saved:b);
+        this.setState({ brandsList:list, draft:{...this.state.draft, logoUrl:null} });
+        this.flash("Logo removida");
+      }).catch(err=>this.flash(err.message || "Erro ao remover a logo"));
+    });
   }
   saveBrand(){
     const d=this.state.draft; if(!d.name||!d.name.trim()){ this.flash("Dê um nome à marca"); return; }
@@ -3179,6 +3239,7 @@ class Component extends DCLogic {
     if(r==="aprovacoes") this.loadApprovals();
     if(r==="credenciais") this.loadOps();
     if(r==="carrossel"){ this.carLoadProjects(); this.carLoadMedia(); }
+    if(r==="biblioteca") this.carLoadMedia();
     if(r==="cobranca") this.loadBilling();
     if(r==="agendador") this.loadScheduler();
     if(r==="admin") this.loadAdmin();
@@ -4749,9 +4810,9 @@ class Component extends DCLogic {
         actions:[
           {title:"Ampliar",icon:I.eye,run:()=>this.setState({drawer:i})},
           {title:"Favoritar",icon:I.star,run:()=>this.setState({favs:{...s.favs,[i]:!s.favs[i]}})},
-          {title:"Regenerar",icon:I.refresh,run:()=>this.flash("Regenerando variação 0"+(i+1)+"…")},
-          {title:"Baixar",icon:I.download,run:()=>{ if(asset) window.open(asset.url,"_blank"); this.flash("Download iniciado · PNG"); }},
-          {title:"Duplicar",icon:I.copy,run:()=>this.flash("Variação duplicada")}
+          {title:"Regenerar",icon:I.refresh,run:()=>this.flash("Regenerar variação avulsa ainda não está disponível — use Refinamento para gerar uma nova versão")},
+          {title:"Baixar",icon:I.download,run:()=>{ if(asset){ window.open(asset.url,"_blank"); this.flash("Download iniciado · PNG"); } else { this.flash("Esta variação ainda não tem imagem gerada"); } }},
+          {title:"Duplicar",icon:I.copy,run:()=>this.flash("Duplicar variação ainda não está disponível")}
         ]
       };
     });
@@ -4764,12 +4825,37 @@ class Component extends DCLogic {
       .map(c=>{
         const versionsCount = (c.creatives||[]).reduce((n,cr)=>n+((cr.versions||[]).length),0);
         const [kind,label] = STATUS_MAP[c.status] || ["wait", c.status];
-        return { id:c.id, name:c.name, brandName:(c.brand&&c.brand.name)||"—", type:c.contentType||"Campanha", date:fmtDate(c.createdAt), status:label, statusKind:kind, versionsLabel:"v"+Math.max(1,versionsCount) };
+        return { id:c.id, name:c.name, brandName:(c.brand&&c.brand.name)||"—", type:c.contentType||"Campanha", date:fmtDate(c.createdAt), status:label, statusKind:kind, versionsLabel:"v"+Math.max(1,versionsCount), isFavorite:!!c.isFavorite };
       });
     const filt = s.projFilter;
-    const projList = campaignsAll.filter(c=>filt==="Todos"||(filt==="Em andamento"&&c.statusKind==="run")||(filt==="Concluídos"&&c.statusKind==="ok")||(filt==="Favoritos"&&c.statusKind==="warn"))
+    const projList = campaignsAll.filter(c=>filt==="Todos"||(filt==="Em andamento"&&c.statusKind==="run")||(filt==="Concluídos"&&c.statusKind==="ok")||(filt==="Favoritos"&&c.isFavorite))
       .map((c,i)=>({name:c.name, brand:c.brandName.toUpperCase(), type:c.type, date:c.date, status:c.status, versions:c.versionsLabel, tag:c.type,
-        badge:this.badge(c.statusKind), canvas:this.canvas(i,"132px"), open:()=>this.viewCampaign(c.id)}));
+        badge:this.badge(c.statusKind), canvas:this.canvas(i,"132px"), open:()=>this.viewCampaign(c.id),
+        favChar:c.isFavorite?"★":"☆", favColor:c.isFavorite?"var(--warn)":"var(--ink3)",
+        toggleFav:()=>this.toggleCampaignFavorite(c.id, !c.isFavorite)}));
+
+    const mediaUrl = m => window.apiClient ? window.apiClient.mediaUrl(m.url) : m.url;
+    const libRaw = (s.carMedia||[]).map(m=>({
+      kind:"Imagens", name:m.name, preview:"IMAGEM", tags:[m.origin==="export"?"Carrossel":m.origin==="ai"?"IA":"Importada", (m.size/1024).toFixed(0)+" KB"],
+      canvas:"display:grid;place-items:center;height:120px;background:url('"+mediaUrl(m)+"') center/cover;color:transparent",
+      canDelete:true, open:()=>window.open(mediaUrl(m),"_blank"),
+      remove:()=>this.confirmDialog("Excluir arquivo","“"+m.name+"” será apagado da Biblioteca.",{tone:"danger",confirmLabel:"Excluir"}).then(ok=>{
+        if(!ok) return;
+        window.apiClient.deleteMedia(m.id).then(()=>this.carLoadMedia()).catch(err=>this.flash(err.message));
+      })
+    })).concat((s.creativesList||[]).flatMap((cr,ci)=>(cr.versions||[]).map((v,vi)=>{
+      const url = v.assets && v.assets[0] && v.assets[0].url;
+      return {
+        kind:"Artes", name:(v.headline||cr.name||"Peça")+" · V"+v.versionNumber, preview:"ARTE", tags:[cr.format||"", "V"+v.versionNumber],
+        canvas:(url
+          ? "display:grid;place-items:center;height:120px;background:url('"+url+"') center/cover;color:transparent"
+          : "display:grid;place-items:center;height:120px;background:"+CANV[(ci+vi)%4]+";font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:rgba(255,255,255,.7)"),
+        canDelete:false, open:()=>{ if(url) window.open(url,"_blank"); else this.flash("Esta versão ainda não tem imagem gerada"); }, remove:()=>{}
+      };
+    })));
+    const libQ = (s.libSearch||"").trim().toLowerCase();
+    const libItems = libRaw.filter(it=>(s.libFilter==="Tudo"||it.kind===s.libFilter)
+      && (!libQ || it.name.toLowerCase().includes(libQ) || it.tags.join(" ").toLowerCase().includes(libQ)));
 
     const isArteDrawer = typeof s.drawer === "number" && artes[s.drawer] != null;
     const sel = !isArteDrawer ? {} : {
@@ -4844,10 +4930,10 @@ class Component extends DCLogic {
       workspaceLabel: (s.user && s.user.role === "SUPERADMIN") ? "Administração da plataforma" : "Workspace · Plano " + ((s.workspace&&s.workspace.plan)||(s.usage&&s.usage.plan)||"Studio"),
       openWorkspace:()=>this.flash("Workspace: "+(s.brandsList||[]).length+" marca(s) cadastrada(s)"),
       openCmd:()=>this.setState({cmdOpen:true}), closeCmd:()=>this.setState({cmdOpen:false}),
-      toast:()=>this.flash("Ação registrada"), toastMsg:s.toastMsg,
+      toast:()=>this.flash("Ainda não disponível nesta versão"), toastMsg:s.toastMsg,
       goCriar:this.go("criar"), goProjetos:this.go("projetos"), goResultado:()=>this.setState({route:"resultado",tab:"copy"}),
       isDash:R==="dashboard", isCriar:R==="criar", isFlow:R==="workflow", isRes:R==="resultado",
-      isProj:R==="projetos"||R==="campanhas"||R==="templates", isLib:R==="biblioteca", isBrand:R==="marcas",
+      isProj:R==="projetos"||R==="campanhas", isLib:R==="biblioteca", isBrand:R==="marcas",
       isAgents:R==="agentes", isInteg:R==="integracoes", isCfg:R==="config",
 
       brandName: b.productName, brandTagline: b.tagline,
@@ -5022,10 +5108,9 @@ class Component extends DCLogic {
         const id = "V"+v.versionNumber, on=s.version===id;
         return {id, note:v.headline?v.headline.slice(0,32):("Versão "+v.versionNumber), pick:()=>this.setState({version:id}),
           style:"display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;border:1px solid "+(on?"var(--bstrong)":"var(--border)")+";background:"+(on?"var(--surface2)":"var(--surface)")+";color:var(--ink)"};
-      }) : [["V1","Primeira geração"],["V2","Copy mais direta"],["V3","Nova paleta"],["V4","CTA em destaque"]].map(v=>{
-        const on=s.version===v[0];
-        return {id:v[0],note:v[1],pick:()=>this.setState({version:v[0]}),
-          style:"display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;border:1px solid "+(on?"var(--bstrong)":"var(--border)")+";background:"+(on?"var(--surface2)":"var(--surface)")+";color:var(--ink)"};
+      }) : [["—","Nenhuma versão gerada ainda"]].map(v=>{
+        return {id:v[0],note:v[1],pick:()=>{},
+          style:"display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px dashed var(--border);color:var(--ink3);cursor:default"};
       }),
       compareLabel: sortedVersions.length>=2 ? ("V"+sortedVersions[1].versionNumber+" → V"+sortedVersions[0].versionNumber) : "V3 → V4 · CTA em destaque, mais respiro",
       compare: sortedVersions.length>=2 ? sortedVersions.slice(0,2).reverse().map((v,i)=>({
@@ -5040,31 +5125,25 @@ class Component extends DCLogic {
         {id:"V4",headline:"Sua empresa não pode parar.",cta:"Fale com a Simplisoft",score:"82/100",canvas:this.canvas(1,"260px"),ctaStyle:"display:inline-block;margin-top:12px;padding:9px 15px;border-radius:8px;background:#fff;color:#101210;font-size:12px;font-weight:700"}
       ],
 
-      projTitle:R==="campanhas"?"Campanhas":R==="templates"?"Templates":"Projetos",
+      projTitle:R==="campanhas"?"Campanhas":"Projetos",
       projSub:R==="campanhas"?"Cada campanha agrupa conceito, estratégia, copies, posts, stories, anúncios e banners."
-        :R==="templates"?"Estruturas reaproveitáveis de briefing, copy e direção de arte."
         :"Todas as criações do workspace, agrupadas por marca.",
       projCount:projList.length+" ITENS",
       projFilters:["Todos","Em andamento","Concluídos","Favoritos"].map(f=>({label:f,style:this.chip(s.projFilter===f),pick:()=>this.setState({projFilter:f})})),
       projList,
 
-      libFilters:["Tudo","Imagens","Artes","Copies","Prompts","Templates","Favoritos"].map(f=>({label:f,style:this.chip(s.libFilter===f),pick:()=>this.setState({libFilter:f})})),
-      libItems: (s.carMedia||[]).map(m=>({
-        name:m.name, preview:"IMAGEM", tags:[m.origin==="export"?"Carrossel":m.origin==="ai"?"IA":"Importada", (m.size/1024).toFixed(0)+" KB"],
-        canvas:"display:grid;place-items:center;height:120px;background:url('"+(window.apiClient?window.apiClient.mediaUrl(m.url):m.url)+"') center/cover;color:transparent"
-      })).concat((s.creativesList||[]).flatMap((cr,ci)=>(cr.versions||[]).map((v,vi)=>({
-        name:(v.headline||cr.name||"Peça")+" · V"+v.versionNumber,
-        preview:"ARTE", tags:[cr.format||"", "V"+v.versionNumber],
-        canvas:(v.assets&&v.assets[0]
-          ? "display:grid;place-items:center;height:120px;background:url('"+v.assets[0].url+"') center/cover;color:transparent"
-          : "display:grid;place-items:center;height:120px;background:"+CANV[(ci+vi)%4]+";font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:rgba(255,255,255,.7)")
-      })))),
+      libFilters:["Tudo","Imagens","Artes"].map(f=>({label:f,style:this.chip(s.libFilter===f),pick:()=>this.setState({libFilter:f})})),
+      setLibSearch:e=>this.setState({libSearch:e.target.value}),
+      libItems, libEmpty: libItems.length===0,
 
       brands:(s.brandsList||[]).map(b=>{
         const on=s.brandSel===b.name;
-        return {name:b.name,sector:b.sector,initial:this.initialsFrom(b.name)[0],pick:()=>this.setState({brandSel:b.name}),
+        const logoSrc = (window.apiClient && b.logoUrl) ? window.apiClient.brandLogoSrc(b.logoUrl) : null;
+        return {name:b.name,sector:b.sector,initial:logoSrc?"":this.initialsFrom(b.name)[0],pick:()=>this.setState({brandSel:b.name}),
           style:"display:flex;align-items:center;gap:10px;padding:10px;border-radius:11px;cursor:pointer;border:1px solid "+(on?"var(--bstrong)":"var(--border)")+";background:"+(on?"var(--surface2)":"var(--surface)"),
-          mark:"width:28px;height:28px;flex:0 0 28px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--ink);color:var(--surface)"};
+          mark: logoSrc
+            ? "width:28px;height:28px;flex:0 0 28px;border-radius:8px;background:url('"+logoSrc+"') center/contain no-repeat;background-color:var(--surface)"
+            : "width:28px;height:28px;flex:0 0 28px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--ink);color:var(--surface)"};
       }),
       brandColors:(selectedBrand?(selectedBrand.colors||[]).map(c=>c.hex):["#0F3B63","#1E6FA8","#C7873F","#101210"]).map(h=>({hex:h.toUpperCase(),swatch:"height:52px;border-radius:9px;border:1px solid var(--border);background:"+h})),
       brandVoice: selectedBrand ? ((selectedBrand.voices&&selectedBrand.voices[0]&&selectedBrand.voices[0].guidelines) || "Nenhuma diretriz de tom de voz cadastrada.") : "Direto, técnico sem jargão, confiável. Fala com o dono do negócio: menos adjetivo, mais consequência prática.",
@@ -5079,11 +5158,18 @@ class Component extends DCLogic {
         {k:"PÚBLICO",v:"—"},{k:"PRODUTOS",v:"—"},{k:"SERVIÇOS",v:"—"},{k:"PALAVRAS PREFERIDAS",v:"—"}
       ],
       banned: selectedBrand ? (selectedBrand.bannedWords||[]) : [],
-      brandDetail: selectedBrand ? {
-        initial:this.initialsFrom(selectedBrand.name)[0], name:selectedBrand.name,
-        sub:(selectedBrand.sector||"")+((selectedBrand.targetAudience)?" · "+selectedBrand.targetAudience.split(";")[0]:""),
-        color:(selectedBrand.colors&&selectedBrand.colors[0])?selectedBrand.colors[0].hex:"var(--ink)"
-      } : { initial:"?", name:"Nenhuma marca cadastrada", sub:"Crie uma marca para começar", color:"var(--ink3)" },
+      brandDetail: selectedBrand ? (()=>{
+        const logoSrc = (window.apiClient && selectedBrand.logoUrl) ? window.apiClient.brandLogoSrc(selectedBrand.logoUrl) : null;
+        const color = (selectedBrand.colors&&selectedBrand.colors[0])?selectedBrand.colors[0].hex:"var(--ink)";
+        return {
+          initial: logoSrc ? "" : this.initialsFrom(selectedBrand.name)[0],
+          name:selectedBrand.name,
+          sub:(selectedBrand.sector||"")+((selectedBrand.targetAudience)?" · "+selectedBrand.targetAudience.split(";")[0]:""),
+          mark: logoSrc
+            ? "width:52px;height:52px;border-radius:14px;background:url('"+logoSrc+"') center/contain no-repeat;background-color:var(--surface2);display:grid;place-items:center;font-size:19px;font-weight:700"
+            : "width:52px;height:52px;border-radius:14px;background:"+color+";color:#fff;display:grid;place-items:center;font-size:19px;font-weight:700"
+        };
+      })() : { initial:"?", name:"Nenhuma marca cadastrada", sub:"Crie uma marca para começar", mark:"width:52px;height:52px;border-radius:14px;background:var(--ink3);color:#fff;display:grid;place-items:center;font-size:19px;font-weight:700" },
       newBrand:()=>this.newBrand(), openBrandEditor:()=>this.openBrandEditor(),
 
       // ── Editor de marca ──
@@ -5095,6 +5181,15 @@ class Component extends DCLogic {
       setBColors:this.setD("colorsStr"), setBProducts:this.setD("productsStr"), setBServices:this.setD("servicesStr"),
       setBPreferred:this.setD("preferredStr"), setBBanned:this.setD("bannedStr"),
       saveBrand:()=>this.saveBrand(), deleteBrand:()=>this.deleteBrand(),
+      bLogoSrc: (window.apiClient && d.logoUrl) ? window.apiClient.brandLogoSrc(d.logoUrl) : null,
+      bLogoPreviewStyle: (window.apiClient && d.logoUrl)
+        ? "width:64px;height:64px;flex:0 0 64px;border-radius:9px;background:url('"+window.apiClient.brandLogoSrc(d.logoUrl)+"') center/contain no-repeat;background-color:var(--surface)"
+        : "width:64px;height:64px;flex:0 0 64px;border-radius:9px;display:grid;place-items:center;background:var(--surface);border:1px dashed var(--bstrong)",
+      bLogoLabel: d.logoUrl ? "Trocar logo" : "Enviar logo",
+      bCanRemoveLogo: !!d.logoUrl,
+      bIsSavedBrand: !!d.id,
+      bNotSavedYet: !d.id,
+      uploadBrandLogo:()=>this.uploadBrandLogo(), removeBrandLogo:()=>this.removeBrandLogo(),
 
       agents:s.agentsList.map((a,i)=>({a,i})).filter(x=>x.a.kind!=="OPERATIONAL").map(({a,i})=>{
         const off=!!a.off;
@@ -5217,7 +5312,7 @@ class Component extends DCLogic {
       saveInteg:()=>this.saveInteg(), deleteInteg:()=>this.deleteInteg(),
 
       drawerOpen:isArteDrawer, closeDrawer:()=>this.setState({drawer:null}), sel,
-      regen:()=>{ this.setState({drawer:null}); this.flash("Regenerando variação…"); }
+      regen:()=>{ this.setState({drawer:null}); this.flash("Regenerar variação avulsa ainda não está disponível — use Refinamento para gerar uma nova versão"); }
     };
   }
 }

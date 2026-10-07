@@ -2,8 +2,22 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { OPERATIONAL_TEMPLATES } from '../src/agent-ops/templates.js';
 import { seedPlans } from './seed-plans.js';
+import { encryptJson } from '../src/shared/security/crypto.js';
 
 const prisma = new PrismaClient();
+
+/**
+ * Integração real só quando existe uma chave de verdade no .env da plataforma (não o
+ * placeholder "...dummy..." de desenvolvimento). Sem isso, o seed não finge uma conexão:
+ * mostra "NÃO CONFIGURADO" como está de fato, para cada workspace cadastrar sua própria chave
+ * em Configurações → Integrações.
+ */
+function integrationSeed(envKey: string | undefined) {
+  const usable = !!envKey && !envKey.includes('dummy');
+  return usable
+    ? { apiKey: `enc:${encryptJson({ apiKey: envKey as string })}`, statusKind: 'ok', statusLabel: 'CONECTADO', usagePct: 0 }
+    : { apiKey: null, statusKind: 'wait', statusLabel: 'NÃO CONFIGURADO', usagePct: 0 };
+}
 
 async function main() {
   console.log('🌱 Semeando o banco de dados...');
@@ -181,7 +195,8 @@ async function main() {
     },
   });
 
-  // 5. Provedores / Integrações
+  // 5. Provedores / Integrações — reflete o que está de fato configurado no .env,
+  // nunca uma conexão de fachada (ver integrationSeed()).
   await prisma.integration.createMany({
     data: [
       {
@@ -190,10 +205,7 @@ async function main() {
         name: 'OpenAI',
         model: 'GPT-4o · GPT Image',
         endpoint: 'api.openai.com/v1',
-        apiKey: 'sk-••••••••3f9a',
-        statusKind: 'ok',
-        statusLabel: 'CONECTADO',
-        usagePct: 68,
+        ...integrationSeed(process.env.OPENAI_API_KEY),
       },
       {
         workspaceId: workspace.id,
@@ -201,10 +213,7 @@ async function main() {
         name: 'Anthropic',
         model: 'Claude Sonnet 4',
         endpoint: 'api.anthropic.com/v1',
-        apiKey: 'sk-ant-••••••7c21',
-        statusKind: 'ok',
-        statusLabel: 'CONECTADO',
-        usagePct: 41,
+        ...integrationSeed(process.env.ANTHROPIC_API_KEY),
       },
     ],
   });

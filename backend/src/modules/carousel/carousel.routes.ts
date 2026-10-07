@@ -1,11 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { env } from '../../config/env.js';
 import { prisma } from '../../config/prisma.js';
 import { providerRouter } from '../../shared/ai/ProviderRouter.js';
+import { hasUsableKey } from '../../shared/ai/keyResolver.js';
 import { audit } from '../../shared/audit/audit.js';
 import { tenantOf } from '../../shared/tenancy/tenant.js';
 import { generateImagePrompt, generateScript, SlideSchema } from './carousel.service.js';
+
+const NO_KEY_MESSAGE =
+  'Geração com IA indisponível: cadastre sua chave Anthropic (Claude) em Configurações → Integrações (ou configure ANTHROPIC_API_KEY na plataforma) e desligue o modo simulado.';
 
 const ProjectBody = z.object({
   name: z.string().min(1).max(120),
@@ -108,6 +111,9 @@ export async function carouselRoutes(fastify: FastifyInstance) {
     const body = z
       .object({ topic: z.string().min(3), count: z.coerce.number().int().min(3).max(12).default(8), tone: z.string().optional(), brandName: z.string().optional(), audience: z.string().optional() })
       .parse(request.body);
+    if (!(await hasUsableKey(workspaceId, 'anthropic'))) {
+      return reply.status(422).send({ message: NO_KEY_MESSAGE });
+    }
     try {
       return reply.send(await generateScript({ workspaceId, ...body }));
     } catch (err: any) {
@@ -126,6 +132,9 @@ export async function carouselRoutes(fastify: FastifyInstance) {
         deckTitles: z.array(z.string()).default([]),
       })
       .parse(request.body);
+    if (!(await hasUsableKey(workspaceId, 'anthropic'))) {
+      return reply.status(422).send({ message: NO_KEY_MESSAGE });
+    }
     try {
       return reply.send(await generateImagePrompt({ workspaceId, ...body } as any));
     } catch (err: any) {
@@ -137,13 +146,13 @@ export async function carouselRoutes(fastify: FastifyInstance) {
   fastify.post('/image', guard, async (request, reply) => {
     const { workspaceId } = tenantOf(request);
     const body = z.object({ prompt: z.string().min(10), count: z.coerce.number().int().min(1).max(4).default(1) }).parse(request.body);
-    if (env.AI_MOCK_MODE || !env.OPENAI_API_KEY || env.OPENAI_API_KEY.includes('dummy')) {
+    if (!(await hasUsableKey(workspaceId, 'openai'))) {
       return reply.status(422).send({
-        message: 'Geração de imagem indisponível: configure OPENAI_API_KEY e AI_MOCK_MODE=false. Enquanto isso, copie o prompt, gere a imagem na ferramenta de sua preferência e importe o arquivo.',
+        message: 'Geração de imagem indisponível: cadastre sua chave OpenAI em Configurações → Integrações (ou configure OPENAI_API_KEY na plataforma) e desligue o modo simulado. Enquanto isso, copie o prompt, gere a imagem na ferramenta de sua preferência e importe o arquivo.',
       });
     }
     try {
-      const provider = providerRouter.getProvider('openai');
+      const provider = await providerRouter.getProviderForWorkspace('openai', workspaceId);
       const res = await provider.generateImage({ prompt: body.prompt, count: body.count });
       await prisma.usageRecord.create({
         data: { workspaceId, provider: 'openai', model: 'gpt-image', operation: 'carousel_image', imageCount: res.data.length, estimatedCost: res.estimatedCost },

@@ -40,7 +40,7 @@ export const aiAnalyzeTool: ToolDefinition<AnalyzeInput> = {
 
   async run(input, ctx) {
     const model = resolveModel(ctx.agent.model, ctx.agent.provider);
-    const provider = providerRouter.getProvider(model.provider);
+    const provider = await providerRouter.getProviderForWorkspace(model.provider, ctx.workspaceId);
 
     const prompt = [
       `AGENTE OPERACIONAL: ${ctx.agent.name}`,
