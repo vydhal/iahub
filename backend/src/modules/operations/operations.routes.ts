@@ -91,4 +91,32 @@ export async function operationsRoutes(fastify: FastifyInstance) {
       recentFailures,
     });
   });
+
+  // Checklist de ativação da Dashboard — cada item reflete um dado real do workspace,
+  // nunca um toggle que o usuário "marca" manualmente.
+  fastify.get('/onboarding', { preHandler: fastify.tenantGuard }, async (request, reply) => {
+    const { workspaceId } = tenantOf(request);
+
+    const [brandsWithIdentity, usableKey, gdrive, campaigns, carousels, members, scheduledPosts] = await Promise.all([
+      prisma.brand.count({ where: { workspaceId, OR: [{ logoKey: { not: null } }, { colors: { some: {} } }] } }),
+      prisma.integration.findFirst({ where: { workspaceId, apiKey: { startsWith: 'enc:' } }, select: { id: true } }),
+      prisma.googleDriveConnection.findUnique({ where: { workspaceId }, select: { id: true } }),
+      prisma.campaign.count({ where: { workspaceId } }),
+      prisma.carouselProject.count({ where: { workspaceId } }),
+      prisma.workspaceMember.count({ where: { workspaceId } }),
+      prisma.scheduledPost.count({ where: { workspaceId } }),
+    ]);
+
+    const items = [
+      { key: 'brand', label: 'Personalize a marca', description: 'Coloque a logo e as cores da agência.', done: brandsWithIdentity > 0, route: 'marcas' },
+      { key: 'ai_key', label: 'Conecte sua chave de IA', description: 'Cada workspace paga só o que usa, direto no seu provedor.', done: !!usableKey, route: 'integracoes' },
+      { key: 'gdrive', label: 'Conecte o Google Drive', description: 'Organize os arquivos do workspace automaticamente.', done: !!gdrive, route: 'integracoes' },
+      { key: 'campaign', label: 'Crie sua primeira campanha', description: 'Estratégia, copy e arte geradas pelo orquestrador.', done: campaigns > 0, route: 'criar' },
+      { key: 'carousel', label: 'Gere seu primeiro carrossel', description: 'Roteiro com IA e exportação em PNG/ZIP.', done: carousels > 0, route: 'carrossel' },
+      { key: 'team', label: 'Convide um membro da equipe', description: 'Divida o trabalho sem dividir o login.', done: members > 1, route: 'config' },
+      { key: 'schedule', label: 'Agende uma publicação', description: 'Telegram, e-mail ou webhook — sem precisar lembrar.', done: scheduledPosts > 0, route: 'agendador' },
+    ];
+
+    return reply.send({ items, completed: items.filter((i) => i.done).length, total: items.length });
+  });
 }

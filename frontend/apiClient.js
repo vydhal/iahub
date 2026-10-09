@@ -215,6 +215,43 @@ export const apiClient = {
     return this.fetch(`/integrations/${id}`, { method: 'DELETE' });
   },
 
+  // Google Drive
+  async getGoogleDriveStatus() {
+    return this.fetch('/integrations/google-drive/status');
+  },
+
+  async getGoogleDriveConnectUrl() {
+    return this.fetch('/integrations/google-drive/connect-url');
+  },
+
+  async disconnectGoogleDrive() {
+    return this.fetch('/integrations/google-drive/disconnect', { method: 'DELETE' });
+  },
+
+  // Instagram (por marca)
+  async getInstagramStatus(brandId) {
+    return this.fetch(`/integrations/instagram/status?brandId=${encodeURIComponent(brandId)}`);
+  },
+
+  async getInstagramConnectUrl(brandId) {
+    return this.fetch(`/integrations/instagram/connect-url?brandId=${encodeURIComponent(brandId)}`);
+  },
+
+  async disconnectInstagram(brandId) {
+    return this.fetch(`/integrations/instagram/disconnect?brandId=${encodeURIComponent(brandId)}`, { method: 'DELETE' });
+  },
+
+  // MCP (conectar Claude/ChatGPT via Model Context Protocol)
+  async getMcpTokenStatus() {
+    return this.fetch('/integrations/mcp/token');
+  },
+  async createMcpToken() {
+    return this.fetch('/integrations/mcp/token', { method: 'POST', body: JSON.stringify({}) });
+  },
+  async revokeMcpToken() {
+    return this.fetch('/integrations/mcp/token', { method: 'DELETE' });
+  },
+
   async getUsage() {
     return this.fetch('/usage');
   },
@@ -284,6 +321,9 @@ export const apiClient = {
 
   async getOperationsSummary() {
     return this.fetch('/operations/summary');
+  },
+  async getOnboarding() {
+    return this.fetch('/operations/onboarding');
   },
   async getAudit(limit = 30) {
     return this.fetch(`/audit?limit=${limit}`);

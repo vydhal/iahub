@@ -18,7 +18,11 @@ import { creativeRoutes } from './modules/creatives/creatives.routes.js';
 import { credentialRoutes } from './modules/credentials/credentials.routes.js';
 import { executionRoutes } from './modules/executions/executions.routes.js';
 import { hookRoutes } from './modules/hooks/hooks.routes.js';
+import { googleDriveRoutes } from './modules/integrations/googleDrive.routes.js';
+import { instagramRoutes } from './modules/integrations/instagram.routes.js';
 import { integrationRoutes } from './modules/integrations/integrations.routes.js';
+import { mcpTokenRoutes } from './modules/integrations/mcp.routes.js';
+import { mcpRoutes } from './mcp/mcp.routes.js';
 import { mediaRoutes } from './modules/media/media.routes.js';
 import { operationsRoutes } from './modules/operations/operations.routes.js';
 import { platformRoutes } from './modules/platform/platform.routes.js';
@@ -87,6 +91,10 @@ export function buildApp() {
   app.register(creativeRoutes, { prefix: '/api/creatives' });
   app.register(agentRoutes, { prefix: '/api/agents' });
   app.register(integrationRoutes, { prefix: '/api/integrations' });
+  app.register(googleDriveRoutes, { prefix: '/api/integrations/google-drive' });
+  app.register(instagramRoutes, { prefix: '/api/integrations/instagram' });
+  app.register(mcpTokenRoutes, { prefix: '/api/integrations/mcp' });
+  app.register(mcpRoutes, { prefix: '/api/mcp' });
   app.register(usageRoutes, { prefix: '/api/usage' });
 
   // Agent Operations Center

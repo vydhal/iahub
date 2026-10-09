@@ -138,6 +138,27 @@ a:hover{color:var(--accent)}
       </button>
     </div>
 
+    <sc-if value="{{ showOnboarding }}">
+    <div style="padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:16px;margin-bottom:34px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px">
+        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:var(--ink3)">PRIMEIROS PASSOS · {{ onboardingCount }}</span>
+        <button onClick="{{ dismissOnboarding }}" style="background:none;border:none;font-size:11.5px;color:var(--ink3);cursor:pointer" style-hover="color:var(--ink)">✕ Dispensar</button>
+      </div>
+      <div style="height:4px;border-radius:99px;background:var(--border);overflow:hidden;margin:10px 0 14px"><div style="{{ onboardingBar }}"></div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+        <sc-for list="{{ onboardingItems }}" as="o">
+          <button onClick="{{ o.go }}" style="display:flex;align-items:flex-start;gap:10px;padding:12px;text-align:left;border:1px solid var(--border);border-radius:11px;background:var(--surface2);cursor:pointer;opacity:{{ o.opacity }}" style-hover="border-color:var(--bstrong)">
+            <span style="{{ o.dotStyle }}"></span>
+            <span style="flex:1;min-width:0">
+              <span style="display:block;font-size:12.5px;font-weight:600;{{ o.titleStyle }}">{{ o.label }}</span>
+              <span style="display:block;margin-top:2px;font-size:11px;color:var(--ink3);line-height:1.4">{{ o.description }}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+    </sc-if>
+
     <div class="g4" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:34px">
       <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
         <div style="padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
@@ -807,6 +828,53 @@ a:hover{color:var(--accent)}
       <button onClick="{{ newInteg }}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="opacity:.88">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Adicionar provedor
       </button>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:16px;background:var(--surface);padding:20px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16l4-8h8l4 8M4 16l4 4h8l4-4M4 16h16"/></svg>
+        <span style="font-size:13.5px;font-weight:600">Google Drive</span>
+        <span style="{{ gdriveBadge }}">{{ gdriveStatusLabel }}</span>
+      </div>
+      <p style="margin:6px 0 14px;font-size:12px;color:var(--ink3);line-height:1.5">{{ gdriveDescription }}</p>
+      <sc-if value="{{ gdriveConnected }}">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button onClick="{{ disconnectGDrive }}" style="padding:8px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;font-size:11.5px;font-weight:600;color:var(--err);cursor:pointer" style-hover="border-color:var(--err)">Desconectar</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ gdriveNotConnected }}">
+        <button onClick="{{ connectGDrive }}" style="padding:9px 15px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer" style-hover="opacity:.88">Conectar Google Drive</button>
+      </sc-if>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:16px;background:var(--surface);padding:20px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h6v6H9z"/></svg>
+        <span style="font-size:13.5px;font-weight:600">Conectar IA (MCP)</span>
+        <span style="{{ mcpBadge }}">{{ mcpStatusLabel }}</span>
+      </div>
+      <p style="margin:6px 0 14px;font-size:12px;color:var(--ink3);line-height:1.5">Conecte o Claude Desktop, Claude Code ou qualquer cliente MCP direto neste workspace — ele passa a enxergar marcas, campanhas e carrosséis e pode criar conteúdo via conversa.</p>
+
+      <sc-if value="{{ mcpShowNewToken }}">
+        <div style="padding:14px;background:var(--surface2);border:1px solid var(--warn);border-radius:11px;margin-bottom:10px">
+          <div style="font-size:11.5px;font-weight:600;color:var(--warn);margin-bottom:8px">Copie agora — este token não será mostrado de novo.</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <code style="flex:1;padding:9px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:11.5px;word-break:break-all">{{ mcpNewToken }}</code>
+            <button onClick="{{ copyMcpToken }}" style="padding:9px 12px;background:var(--ink);color:var(--surface);border:none;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap">Copiar</button>
+          </div>
+          <div style="margin-top:12px;font-size:11px;color:var(--ink3)">Configuração do Claude Desktop (<code>claude_desktop_config.json</code>):</div>
+          <pre style="margin:6px 0 0;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:10.5px;line-height:1.5;overflow-x:auto">{{ mcpConfigSnippet }}</pre>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ mcpConnected }}">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:11.5px;color:var(--ink3)">{{ mcpMeta }}</span>
+          <button onClick="{{ createMcpToken }}" style="padding:8px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;font-size:11.5px;font-weight:600;color:var(--ink);cursor:pointer">Gerar novo token</button>
+          <button onClick="{{ revokeMcpToken }}" style="padding:8px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;font-size:11.5px;font-weight:600;color:var(--err);cursor:pointer" style-hover="border-color:var(--err)">Revogar</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ mcpNotConnected }}">
+        <button onClick="{{ createMcpToken }}" style="padding:9px 15px;background:var(--ink);color:var(--surface);border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer" style-hover="opacity:.88">Gerar token MCP</button>
+      </sc-if>
     </div>
     <div style="border:1px solid var(--border);border-radius:16px;background:var(--surface);overflow:hidden">
       <sc-for list="{{ integrations }}" as="i" hint-placeholder-count="6">
@@ -1981,6 +2049,26 @@ a:hover{color:var(--accent)}
           <div style="padding:14px;background:var(--surface2);border-radius:12px;font-size:11.5px;color:var(--ink3);line-height:1.5">Salve a marca primeiro — depois é só voltar aqui em "Editar marca" para enviar a logo e já sair com a paleta sugerida.</div>
         </sc-if>
       </div>
+      <sc-if value="{{ bIsSavedBrand }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="font-size:12.5px;font-weight:600">Instagram</div>
+          <span style="{{ bIgBadge }}">{{ bIgStatusLabel }}</span>
+        </div>
+        <sc-if value="{{ bIgConnected }}">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--surface2);border-radius:12px">
+            <div style="flex:1;font-size:11.5px;color:var(--ink3)">Conectado como <b style="color:var(--ink)">@{{ bIgUsername }}</b> · página {{ bIgPageName }}</div>
+            <button onClick="{{ disconnectBrandInstagram }}" style="padding:8px 10px;background:none;border:1px solid var(--border);border-radius:8px;font-size:11.5px;color:var(--err);cursor:pointer">Desconectar</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ bIgNotConnected }}">
+          <div style="padding:14px;background:var(--surface2);border-radius:12px">
+            <div style="font-size:11.5px;color:var(--ink3);margin-bottom:10px;line-height:1.5">Publique posts direto nesta marca — a conta do Instagram precisa ser Business/Creator e estar vinculada a uma Página do Facebook.</div>
+            <button onClick="{{ connectBrandInstagram }}" style="padding:8px 13px;background:var(--ink);color:var(--surface);border:none;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer">Conectar Instagram</button>
+          </div>
+        </sc-if>
+      </div>
+      </sc-if>
       <div>
         <div style="font-size:12.5px;font-weight:600;margin-bottom:8px">Nome da marca</div>
         <input value="{{ bName }}" onChange="{{ setBName }}" placeholder="Ex: Simplisoft" style="width:100%;padding:10px 12px;font-size:13px;color:var(--ink);background:var(--surface2);border:1px solid var(--border);border-radius:10px;outline:none">
@@ -2761,7 +2849,9 @@ const CAR_TEMPLATES = [
 class Component extends DCLogic {
   state = {
     theme:"light", route:"dashboard", tab:"copy", cmdOpen:false, drawer:null, toastMsg:"",
-    tech:false, step:3, projFilter:"Todos", libFilter:"Tudo", libSearch:"", cfgTab:"Perfil", version:"V4",
+    tech:false, step:3, projFilter:"Todos", libFilter:"Tudo", libSearch:"", cfgTab:"Perfil", version:"V4", gdrive:null,
+    onboarding:null, onboardingDismissed:(()=>{ try{ return localStorage.getItem("onboardingDismissed")==="1"; }catch(e){ return false; } })(),
+    mcpStatus:null, mcpNewToken:null,
     brief:"", refine:"", type:"Campanha completa", goal:"Gerar leads", tone:"Profissional",
     fmt:"1080 × 1080", brandSel:"Simplisoft", audience:"Pequenas empresas · 5 a 50 funcionários",
     favs:{2:true},
@@ -2792,6 +2882,23 @@ class Component extends DCLogic {
   componentDidMount(){
     if(!this.state.car) this.setState({ car: this.blankCarousel() });
     this.loadBranding();
+    // Volta do OAuth do Google Drive (?gdrive=conectado|erro&msg=...): mostra o resultado e já abre Integrações.
+    const qp = new URLSearchParams(window.location.search);
+    const gdrive = qp.get("gdrive");
+    if(gdrive){
+      const msg = gdrive === "conectado" ? "Google Drive conectado!" : (qp.get("msg") || "Não foi possível conectar o Google Drive.");
+      this.setState({ route: "integracoes" });
+      window.history.replaceState({}, "", window.location.pathname);
+      setTimeout(() => this.flash(msg), 300);
+    }
+    // Volta do OAuth do Instagram (?instagram=conectado|erro&msg=...): abre Marcas com o resultado.
+    const instagram = qp.get("instagram");
+    if(instagram){
+      const msg = instagram === "conectado" ? "Instagram conectado! Abra a marca em Editar marca pra ver." : (qp.get("msg") || "Não foi possível conectar o Instagram.");
+      this.setState({ route: "marcas" });
+      window.history.replaceState({}, "", window.location.pathname);
+      setTimeout(() => this.flash(msg), 300);
+    }
     document.addEventListener("keydown", this.onKey = e=>{
       if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==="k"){ e.preventDefault(); this.setState({cmdOpen:!this.state.cmdOpen}); }
       if(e.key==="Escape" && this.state.dialog){ this.closeDialog(null); return; }
@@ -2859,6 +2966,8 @@ class Component extends DCLogic {
     client.getIntegrations()
       .then(list => this.setState({ integList: list.map(x=>({...x, initial:this.initialsFrom(x.name)[0], key:x.apiKey||"—"})) }))
       .catch(()=>{});
+    this.loadGoogleDrive();
+    this.loadMcpStatus();
     client.getBrands()
       .then(brandsList => this.setState({ brandsList, brandSel: brandsList[0] ? brandsList[0].name : this.state.brandSel }))
       .catch(()=>{});
@@ -2876,6 +2985,48 @@ class Component extends DCLogic {
       })
       .catch(()=>{});
     this.loadCampaigns();
+  }
+  loadGoogleDrive(){
+    const client = window.apiClient; if(!client) return;
+    client.getGoogleDriveStatus().then(gdrive => this.setState({ gdrive })).catch(()=>{});
+  }
+  connectGDrive(){
+    const client = window.apiClient; if(!client) return;
+    client.getGoogleDriveConnectUrl()
+      .then(res => { window.location.href = res.url; })
+      .catch(err => this.flash(err.message || "Não foi possível iniciar a conexão com o Google Drive"));
+  }
+  disconnectGDrive(){
+    const client = window.apiClient; if(!client) return;
+    this.confirmDialog("Desconectar Google Drive", "O workspace deixará de ter acesso à pasta conectada.", { tone:"danger", confirmLabel:"Desconectar" }).then(ok=>{
+      if(!ok) return;
+      client.disconnectGoogleDrive()
+        .then(() => { this.setState({ gdrive: { connected:false } }); this.flash("Google Drive desconectado"); })
+        .catch(err => this.flash(err.message || "Erro ao desconectar"));
+    });
+  }
+  loadMcpStatus(){
+    const client = window.apiClient; if(!client) return;
+    client.getMcpTokenStatus().then(mcpStatus=>this.setState({mcpStatus})).catch(()=>{});
+  }
+  createMcpToken(){
+    const client = window.apiClient; if(!client) return;
+    client.createMcpToken()
+      .then(res => { this.setState({ mcpNewToken:res.token, mcpStatus:{connected:true, label:"Claude / MCP", createdAt:new Date().toISOString(), lastUsedAt:null} }); })
+      .catch(err => this.flash(err.message || "Não foi possível gerar o token"));
+  }
+  revokeMcpToken(){
+    const client = window.apiClient; if(!client) return;
+    this.confirmDialog("Revogar token MCP", "Qualquer cliente conectado com esse token (Claude Desktop, Claude Code etc.) perderá o acesso imediatamente.", { tone:"danger", confirmLabel:"Revogar" }).then(ok=>{
+      if(!ok) return;
+      client.revokeMcpToken()
+        .then(() => { this.setState({ mcpStatus:{connected:false}, mcpNewToken:null }); this.flash("Token MCP revogado"); })
+        .catch(err => this.flash(err.message || "Erro ao revogar"));
+    });
+  }
+  copyMcpToken(){
+    this.copyToClipboard(this.state.mcpNewToken || "");
+    this.flash("Token copiado");
   }
   loadCampaigns(){
     const client = window.apiClient;
@@ -3070,7 +3221,7 @@ class Component extends DCLogic {
   openBrandEditor(){
     const b = (this.state.brandsList||[]).find(x=>x.name===this.state.brandSel) || (this.state.brandsList||[])[0];
     if(!b){ this.newBrand(); return; }
-    this.setState({editBrand:b.id, draft:{
+    this.setState({editBrand:b.id, igStatus:null, draft:{
       id:b.id, logoUrl:b.logoUrl||null,
       name:b.name, sector:b.sector, desc:b.description||"", audience:b.targetAudience||"",
       colorsStr:(b.colors||[]).map(c=>c.hex).join(", "),
@@ -3079,6 +3230,26 @@ class Component extends DCLogic {
       preferredStr:(b.preferredWords||[]).join(", "),
       bannedStr:(b.bannedWords||[]).join(", ")
     }});
+    this.loadBrandInstagram(b.id);
+  }
+  loadBrandInstagram(brandId){
+    const api = window.apiClient; if(!api) return;
+    api.getInstagramStatus(brandId).then(igStatus=>this.setState({igStatus})).catch(()=>{});
+  }
+  connectBrandInstagram(){
+    const api = window.apiClient, id = this.state.editBrand; if(!api||!id) return;
+    api.getInstagramConnectUrl(id)
+      .then(res => { window.location.href = res.url; })
+      .catch(err => this.flash(err.message || "Não foi possível iniciar a conexão com o Instagram"));
+  }
+  disconnectBrandInstagram(){
+    const api = window.apiClient, id = this.state.editBrand; if(!api||!id) return;
+    this.confirmDialog("Desconectar Instagram", "Esta marca deixará de publicar direto pelo Instagram conectado.", { tone:"danger", confirmLabel:"Desconectar" }).then(ok=>{
+      if(!ok) return;
+      api.disconnectInstagram(id)
+        .then(() => { this.setState({ igStatus:{connected:false} }); this.flash("Instagram desconectado"); })
+        .catch(err => this.flash(err.message || "Erro ao desconectar"));
+    });
   }
   uploadBrandLogo(){
     const api = window.apiClient; if(!api) return;
@@ -3214,6 +3385,14 @@ class Component extends DCLogic {
     const c=window.apiClient; if(!c) return;
     c.getAgents().then(list=>this.setState({agentsList:list.map(a=>this.mapAgent(a))})).catch(()=>{});
   }
+  loadOnboarding(){
+    const c=window.apiClient; if(!c) return;
+    c.getOnboarding().then(onboarding=>this.setState({onboarding})).catch(()=>{});
+  }
+  dismissOnboarding(){
+    try{ localStorage.setItem("onboardingDismissed","1"); }catch(e){}
+    this.setState({onboardingDismissed:true});
+  }
   loadOps(){
     const c=window.apiClient; if(!c) return;
     c.getOperationsSummary().then(opsSummary=>this.setState({opsSummary, opsUpdatedAt:new Date().toISOString()})).catch(()=>{});
@@ -3233,7 +3412,7 @@ class Component extends DCLogic {
     c.getExecutions(f==="all"?{limit:100}:{status:f, limit:100}).then(executions=>this.setState({executions})).catch(()=>{});
   }
   onRoute(r){
-    if(r==="dashboard"){ this.loadOps(); this.loadCampaigns(); }
+    if(r==="dashboard"){ this.loadOps(); this.loadCampaigns(); this.loadOnboarding(); }
     if(r==="agentes"){ this.reloadAgents(); this.loadOps(); }
     if(r==="execucoes") this.loadExecs();
     if(r==="aprovacoes") this.loadApprovals();
@@ -4968,6 +5147,17 @@ class Component extends DCLogic {
       fillDemo:()=>{ this.setState({authEmail:b.demoEmail || "vidal@simplisoft.com.br", authPassword:"123456"}, ()=>{ this.doLogin(); }); },
       goConfig:()=>this.setState({route:"config", drawer:null}),
 
+      showOnboarding: !!(s.onboarding && s.onboarding.completed < s.onboarding.total && !s.onboardingDismissed),
+      onboardingCount: s.onboarding ? (s.onboarding.completed+" de "+s.onboarding.total+" concluídos") : "",
+      onboardingBar: "display:block;height:100%;width:"+(s.onboarding?Math.round(s.onboarding.completed/s.onboarding.total*100):0)+"%;background:var(--accent)",
+      dismissOnboarding:()=>this.dismissOnboarding(),
+      onboardingItems: (s.onboarding?s.onboarding.items:[]).map(o=>({
+        label:o.label, description:o.description, opacity:o.done?"0.55":"1",
+        go:()=>this.setState({route:o.route}, ()=>this.onRoute(o.route)),
+        titleStyle:o.done?"text-decoration:line-through;color:var(--ink3)":"",
+        dotStyle:"flex:0 0 16px;width:16px;height:16px;border-radius:99px;margin-top:1px;background:"+(o.done?"var(--ok)":"var(--surface)")+";border:1.5px solid "+(o.done?"var(--ok)":"var(--border)")
+      })),
+
       stats:[
         {label:"PROJETOS CRIADOS",value:String(campaignsAll.length),delta:"",note:"campanhas no workspace",deltaStyle:"font-size:11px;color:var(--ink3)"},
         {label:"CAMPANHAS ATIVAS",value:String(activeCampaignsCount),delta:"",note:"em processamento agora",deltaStyle:"font-size:11px;color:var(--ink3)"},
@@ -5190,6 +5380,11 @@ class Component extends DCLogic {
       bIsSavedBrand: !!d.id,
       bNotSavedYet: !d.id,
       uploadBrandLogo:()=>this.uploadBrandLogo(), removeBrandLogo:()=>this.removeBrandLogo(),
+      bIgConnected: !!(s.igStatus&&s.igStatus.connected), bIgNotConnected: !(s.igStatus&&s.igStatus.connected),
+      bIgStatusLabel: (s.igStatus&&s.igStatus.connected)?"CONECTADO":"NÃO CONFIGURADO",
+      bIgBadge: this.badge((s.igStatus&&s.igStatus.connected)?"ok":"wait"),
+      bIgUsername: (s.igStatus&&s.igStatus.igUsername)||"—", bIgPageName: (s.igStatus&&s.igStatus.pageName)||"—",
+      connectBrandInstagram:()=>this.connectBrandInstagram(), disconnectBrandInstagram:()=>this.disconnectBrandInstagram(),
 
       agents:s.agentsList.map((a,i)=>({a,i})).filter(x=>x.a.kind!=="OPERATIONAL").map(({a,i})=>{
         const off=!!a.off;
@@ -5211,6 +5406,23 @@ class Component extends DCLogic {
         mark:"width:32px;height:32px;flex:0 0 32px;border-radius:99px;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--surface2);color:var(--ink)",
         bar:"display:block;height:100%;width:"+x.usagePct+"%;background:"+(x.usagePct>75?"var(--warn)":"var(--accent)")})),
       newInteg:()=>this.newInteg(),
+
+      gdriveConnected:!!(s.gdrive&&s.gdrive.connected), gdriveNotConnected:!(s.gdrive&&s.gdrive.connected),
+      gdriveStatusLabel:(s.gdrive&&s.gdrive.connected)?"CONECTADO":"NÃO CONFIGURADO",
+      gdriveBadge:this.badge((s.gdrive&&s.gdrive.connected)?"ok":"wait"),
+      gdriveDescription:(s.gdrive&&s.gdrive.connected)
+        ? "Conectado como "+(s.gdrive.email||"—")+" · pasta “"+(s.gdrive.rootFolderName||"—")+"”."
+        : "Conecte o Google Drive da agência para organizar os arquivos do workspace automaticamente — ninguém passa senha pra ninguém, é uma autorização do próprio Google.",
+      connectGDrive:()=>this.connectGDrive(), disconnectGDrive:()=>this.disconnectGDrive(),
+
+      mcpConnected:!!(s.mcpStatus&&s.mcpStatus.connected), mcpNotConnected:!(s.mcpStatus&&s.mcpStatus.connected),
+      mcpStatusLabel:(s.mcpStatus&&s.mcpStatus.connected)?"CONECTADO":"NÃO CONFIGURADO",
+      mcpBadge:this.badge((s.mcpStatus&&s.mcpStatus.connected)?"ok":"wait"),
+      mcpMeta: (s.mcpStatus&&s.mcpStatus.lastUsedAt) ? ("Último uso: "+new Date(s.mcpStatus.lastUsedAt).toLocaleString("pt-BR"))
+        : (s.mcpStatus&&s.mcpStatus.connected ? "Ainda não usado" : ""),
+      mcpShowNewToken: !!s.mcpNewToken, mcpNewToken: s.mcpNewToken,
+      mcpConfigSnippet: '{\n  "mcpServers": {\n    "ai-creative-studio": {\n      "url": "'+window.location.origin+'/api/mcp",\n      "headers": { "Authorization": "Bearer '+(s.mcpNewToken||"SEU_TOKEN")+'" }\n    }\n  }\n}',
+      createMcpToken:()=>this.createMcpToken(), revokeMcpToken:()=>this.revokeMcpToken(), copyMcpToken:()=>this.copyMcpToken(),
 
       cfgTabs:["Perfil","Workspace","Preferências","Modelos de IA","Limites de uso","Billing","API Keys","Notificações","Segurança"].map(t=>{
         const on=s.cfgTab===t;

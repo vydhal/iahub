@@ -35,6 +35,17 @@ const envSchema = z.object({
   // Desligado por padrão para evitar que um agente alcance serviços internos (Postgres, Redis, API).
   ALLOW_PRIVATE_NETWORK: envBool(false),
   PUBLIC_API_URL: z.string().default('http://localhost:3000'),
+  // Origem que o navegador deve ver depois do OAuth do Google (SPA) — difere de PUBLIC_API_URL em
+  // dev (frontend:8080 por trás do proxy do Vite vs. backend:3000 publicado direto).
+  PUBLIC_WEB_URL: z.string().default('http://localhost:8080'),
+
+  // ── Google Drive (OAuth por workspace) ──
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+
+  // ── Instagram / Facebook Login (Graph API, OAuth por marca) ──
+  FACEBOOK_APP_ID: z.string().optional(),
+  FACEBOOK_APP_SECRET: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

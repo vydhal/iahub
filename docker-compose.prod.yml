@@ -55,8 +55,13 @@ services:
       - RUN_WORKERS=true
       - ALLOW_PRIVATE_NETWORK=false
       - PUBLIC_API_URL=https://aihub.simplisoft.com.br
+      - PUBLIC_WEB_URL=https://aihub.simplisoft.com.br
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - FACEBOOK_APP_ID=${FACEBOOK_APP_ID:-}
+      - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET:-}
     # Sem bind mount do código (imagem imutável) nem polling — isso é só para hot reload em dev.
     # Importante: o schema do banco NÃO é aplicado automaticamente aqui de propósito — rodar
     # `prisma db push --accept-data-loss` sozinho em todo restart arriscaria apagar dado real sem

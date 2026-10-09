@@ -2,8 +2,112 @@
 ## AI Creative Studio — Full-Stack AI Orchestration Platform
 
 > **Status Geral:** Backend e Frontend genuinamente conectados e validados ponta a ponta (login → criar campanha → workflow real → dados persistidos → CRUD real de agentes/integrações/marcas). `npx tsc --noEmit` = 0 erros.
-> **Data de Atualização:** 07/10/2026 (noite) — Auditoria completa de Dashboard/Projetos/Templates/Campanhas/Biblioteca/Aprovações/Credenciais/Execuções. Sessões anteriores no mesmo dia: Editor de posts (chave de IA honesta); logo da marca com extração automática de paleta; bloqueadores de produção (chave de IA por workspace, segredos próprios, backup, scaffold de deploy); Editor de posts, Cobrança, Superadmin/módulos, Agendador, identidade da plataforma e diálogos internos. Sessões anteriores: 19/09/2026 (Agent Operations Center) e 08/09/2026 (correção mock → real).
+> **Data de Atualização:** 09/10/2026 (madrugada) — Servidor MCP real (Conectar IA). Sessões anteriores no mesmo dia: integração com Instagram por marca; checklist de ativação na Dashboard; integração OAuth com Google Drive. Sessões anteriores: 07/10/2026 (noite) — auditoria completa de Dashboard/Projetos/Templates/Campanhas/Biblioteca/Aprovações/Credenciais/Execuções; Editor de posts (chave de IA honesta); logo da marca com extração automática de paleta; bloqueadores de produção (chave de IA por workspace, segredos próprios, backup, scaffold de deploy); Editor de posts, Cobrança, Superadmin/módulos, Agendador, identidade da plataforma e diálogos internos. Sessões anteriores: 19/09/2026 (Agent Operations Center) e 08/09/2026 (correção mock → real).
 > **Importante:** a versão anterior deste documento (07-08/09) dizia "100% Funcional | Frontend & Backend Conectados" — **isso era falso**. Havia um bug de proxy que quebrava a conexão real silenciosamente (ver seção 5-A). A aplicação rodava inteira em cima de fallbacks locais. Essa sessão corrigiu isso e validou tudo com testes reais (Playwright + curl), não apenas leitura de código.
+
+---
+
+## 🆕 SESSÃO 09/10/2026 (parte 4) — SERVIDOR MCP REAL ("CONECTAR IA")
+
+O usuário tinha deixado combinado, ainda na sessão de bloqueadores de produção, que o próximo grande passo depois de resolver os bloqueadores seria o MCP (ver `PROGRESS.md`, "Próximo passo combinado"). O próprio código já carregava essa intenção: a interface `ExecutionProvider` (`backend/src/agent-ops/providers/ExecutionProvider.ts`) documenta desde antes desta sessão "o restante da plataforma não sabe se o agente roda no runtime próprio, num ambiente Claude Code/Cowork ou noutro motor — novos provedores entram registrando-se em `providers/index.ts`", e a lista de pendências já citava "MCP e provedores de execução alternativos (Cowork/Claude Code) — a interface existe, falta implementação".
+
+### Qual das duas leituras de "MCP" foi implementada
+Existem duas coisas relacionadas, mas diferentes, por trás da sigla "MCP" neste contexto:
+1. **Expor a plataforma como servidor MCP**, pra ferramentas de IA externas (Claude Desktop, Claude Code, outras) se conectarem e operarem o workspace via conversa — foi exatamente isso que o levantamento competitivo com o "Modo Criador" mostrou como "Conectar IA (MCP)", travado no plano deles como diferencial pago.
+2. **Um `ExecutionProvider` alternativo** que delegasse a execução de um *agente operacional* (os playbooks do Agent Operations Center) pra um runtime externo tipo Claude Code, em vez do `NativeExecutionProvider` atual.
+
+Esta sessão implementou a **primeira** — é a que tem valor de produto imediato e testável ponta a ponta. A segunda continua só com a interface pronta (como já estava documentado), sem implementação — ver "Fora do escopo" no fim desta seção.
+
+### Implementação
+- **Autenticação própria, sem reaproveitar o JWT de sessão**: quem bate no servidor MCP é o cliente MCP (Claude Desktop/Code), não o navegador do usuário — não faz sentido pedir pra colar um JWT de curta duração num arquivo de configuração. Em vez disso: `McpToken` (schema) — 1 por workspace, só o **hash SHA-256** é persistido (`tokenHash @unique`), o valor em texto puro só existe na resposta do `POST` que o gera, nunca mais pode ser lido de volta — mesmo princípio de qualquer token de API de plataforma séria.
+- **`backend/src/modules/integrations/mcp.routes.ts`**: `GET /token` (status, nunca o valor), `POST /token` (gera/substitui, devolve o token cru uma única vez), `DELETE /token` (revoga). Exporta também `workspaceForMcpToken(rawToken)`, usado pelo próprio servidor MCP pra resolver de qual workspace é aquela chamada.
+- **`backend/src/mcp/server.ts`**: `buildMcpServerForWorkspace(workspaceId)` monta um `McpServer` (SDK oficial `@modelcontextprotocol/sdk`) com 6 tools registradas via `registerTool` (schema de entrada em Zod, igual ao resto do projeto). Cada tool é um wrapper fino — zero lógica de negócio duplicada:
+  - `list_brands`, `list_campaigns`, `get_campaign` — leituras diretas via Prisma, escopadas pelo `workspaceId` resolvido do token.
+  - `create_campaign` — cria a `Campaign` com os mesmos defaults de `campaigns.routes.ts` e chama `orchestratorService.executeCampaignWorkflow(campaign.id)` de verdade (síncrono), devolvendo copy, imagens e notas do crítico. Como por baixo usa o mesmo `ProviderRouter.getProviderForWorkspace`, herda de graça a recusa honesta ("Nenhuma chave de IA configurada...") quando o workspace não tem chave — nenhum tratamento especial precisou ser escrito aqui.
+  - `generate_carousel_script` — chama `generateScript()` do Editor de posts, mesma lógica, mesma honestidade quanto a chave de IA.
+  - `list_agent_executions` — leitura das execuções recentes do Agent Operations Center.
+- **`backend/src/mcp/mcp.routes.ts`**: `POST /api/mcp` — lê `Authorization: Bearer <token>`, resolve o workspace via `workspaceForMcpToken`, monta um `McpServer` + `StreamableHTTPServerTransport` **novos a cada requisição** (modo *stateless* — `sessionIdGenerator: undefined`, sem sessão em memória entre chamadas; mais simples de operar e suficiente pro conjunto de tools de hoje, que não precisam de notificação assíncrona do servidor pro cliente). `reply.hijack()` antes de `transport.handleRequest(request.raw, reply.raw, request.body)`, porque a partir daí quem escreve a resposta HTTP é o próprio transporte do SDK, não o Fastify.
+- **Frontend**: seção "Conectar IA (MCP)" na tela de Integrações (`frontend/index.html`) — gerar token (aparece uma única vez, com botão copiar e o trecho pronto pra colar em `claude_desktop_config.json`, já preenchido com a URL do próprio workspace via `window.location.origin + "/api/mcp"` — funciona igual em dev, atrás do proxy do Vite, e em produção, atrás do Caddy), "Gerar novo token" (substitui, invalida o antigo) e "Revogar".
+
+### Validado de verdade — com um cliente MCP real, não um mock
+Depois de gerar um token pela API, escrevi um script usando o **SDK oficial do lado cliente** (`Client` + `StreamableHTTPClientTransport`, o mesmo pacote, não uma simulação) que:
+1. Conectou no servidor rodando em `http://localhost:3000/api/mcp` com o token no header `Authorization`.
+2. Chamou `listTools()` — recebeu de volta as 6 tools registradas, pelos nomes certos.
+3. Chamou `callTool({ name: "list_brands" })` — recebeu de volta o registro **real** do banco (a marca "Simplisoft", com setor e descrição batendo com o seed).
+4. Testado também: token inválido → `401` com `{"error":"invalid_token","message":"Token de MCP inválido ou revogado."}` (o próprio erro do servidor, propagado pelo SDK); depois de revogar o token pela tela, uma nova chamada com o token antigo volta a falhar.
+
+Repeti o mesmo roteiro pela UI (Playwright): gerar token mostra a caixa de aviso + snippet; revogar volta ao estado "NÃO CONFIGURADO". `npx tsc --noEmit` = 0 erros.
+
+### Fora do escopo desta sessão
+- O `ExecutionProvider` alternativo pra Cowork/Claude Code (delegar a execução de um *agente* do Agent Operations Center, não uma chamada avulsa de um cliente externo) — a interface continua pronta, nada foi implementado além do que já existia (`NativeExecutionProvider`).
+- Múltiplas tools mais ricas (editar campanha, aprovar execução, etc.) — o conjunto de 6 tools é deliberadamente enxuto pra validar o mecanismo ponta a ponta; adicionar mais tools depois é só chamar `server.registerTool(...)` de novo.
+- Gating por plano (o concorrente trava "Conectar IA (MCP)" no Pro) — aqui está disponível pra qualquer workspace; se o usuário quiser restringir por plano, é uma decisão de billing, não uma lacuna técnica.
+
+---
+
+## 🆕 SESSÃO 09/10/2026 (parte 3) — CHECKLIST DE ATIVAÇÃO + INSTAGRAM POR MARCA
+
+Continuação direta da pesquisa competitiva com o "Modo Criador" (ver seção anterior). Depois do Google Drive, o usuário pediu para seguir com os próximos itens da lista de prioridade sem precisar confirmar um por um.
+
+### Checklist "Primeiros passos" na Dashboard
+- **Backend**: `GET /api/operations/onboarding` (`backend/src/modules/operations/operations.routes.ts`) — calcula 7 itens em paralelo direto do banco (nenhum é um campo "marcado" manualmente): marca com logo ou cor cadastrada, alguma `Integration` com chave real criptografada (`apiKey` começando com `enc:`), `GoogleDriveConnection` existente, `Campaign`/`CarouselProject`/`ScheduledPost` com pelo menos 1 registro, e `WorkspaceMember` com mais de 1 linha.
+- **Frontend**: card no topo da Dashboard (`frontend/index.html`), com barra de progresso e um item por quadrado — clicar leva direto pra tela certa (`route` de cada item). "Dispensar" grava em `localStorage` (por navegador, não é dado de workspace) e o card some mesmo que ainda falte item, até o usuário limpar o storage.
+- Validado ao vivo: no estado atual do workspace (marca seed com cor, mas sem IA/Drive/campanha/carrossel/equipe extra/agendamento) mostrou corretamente "1 de 7 concluídos", com "Personalize a marca" riscado e os demais em aberto; clique em "Conecte sua chave de IA" navegou pra Integrações; dispensar sobreviveu a um reload de página.
+
+### Instagram por marca (Facebook Login + Graph API)
+Diferente do Google Drive (1 conexão por **workspace**), o Instagram é 1 conexão por **marca** — cada marca/cliente da agência publica na própria conta, igual ao "Instagram dos clientes" do concorrente.
+
+- **Schema**: `InstagramConnection` (`backend/prisma/schema.prisma`) — `brandId @unique`, `pageId`/`pageName` (Página do Facebook), `igBusinessId`/`igUsername` (a conta que de fato publica), `accessToken` criptografado (token de usuário de longa duração, ~60 dias), `tokenExpiresAt`, `status`/`lastError`.
+- **Rotas** (`backend/src/modules/integrations/instagram.routes.ts`, prefixo `/api/integrations/instagram`):
+  - `GET /connect-url?brandId=` — confere que a marca pertence ao workspace do usuário, assina um `state` (JWT 10 min) e monta a URL do diálogo OAuth do Facebook (`instagram_basic`, `instagram_content_publish`, `pages_show_list`, `pages_read_engagement`, `business_management`).
+  - `GET /callback` — sem sessão (só confia no `state`): troca `code` por token curto, troca de novo por token de longa duração (`fb_exchange_token`), lista `/me/accounts` com `instagram_business_account{id,username}` embutido. **Decisão de design**: só conecta automaticamente quando existe **exatamente uma** página com Instagram Business vinculado — zero candidatas ou mais de uma viram um erro explicando exatamente o que falta (ex.: "converta a conta para Business/Creator" ou "encontramos N páginas, desvincule as extras"), em vez de adivinhar qual conectar.
+  - `DELETE /disconnect?brandId=` — remove a conexão.
+  - `GET /status?brandId=` — nunca devolve o token, só `{connected, pageName, igUsername, status}`.
+  - `postImageToInstagram(brandId, imageUrl, caption)` — função exportada (não é rota) com o fluxo de 2 passos da Graph API (criar container de mídia em `/{ig-id}/media`, depois publicar em `/{ig-id}/media_publish`). Escrita e pronta, mas **nada chama ela ainda** — é o equivalente ao `getDriveClientForWorkspace()` do Drive: infraestrutura pronta pro agendador (`scheduler.service.ts`) ganhar um canal "instagram" de verdade numa próxima rodada.
+- **Config**: `FACEBOOK_APP_ID`/`FACEBOOK_APP_SECRET` (opcionais — sem eles, `/connect-url` devolve 422 honesto, mesmo padrão do Drive e das chaves de IA).
+- **Frontend**: seção "Instagram" dentro do editor de marca (tela Marcas, ao lado do upload de logo) — badge honesto, botão "Conectar Instagram" (navegação de página inteira pro Facebook), e tratamento de `?instagram=conectado|erro&msg=` no `componentDidMount` (volta pra tela Marcas com o aviso certo).
+
+### Validado ao vivo
+Checklist testado como descrito acima. Instagram: sem `FACEBOOK_APP_ID`/`FACEBOOK_APP_SECRET` configurados, abrir o editor da marca Simplisoft mostra "NÃO CONFIGURADO" e clicar em "Conectar Instagram" devolve exatamente "Integração com Instagram não está configurada nesta instalação. Peça ao administrador da plataforma para cadastrar FACEBOOK_APP_ID e FACEBOOK_APP_SECRET." — nenhuma simulação de conexão. `npx tsc --noEmit` = 0 erros.
+
+### O que falta (configuração externa, não é código)
+Criar um app em `developers.facebook.com`, adicionar o produto "Facebook Login", configurar o Redirect URI (`<PUBLIC_API_URL>/api/integrations/instagram/callback`) e colar `FACEBOOK_APP_ID`/`FACEBOOK_APP_SECRET`. **Importante**: publicar de verdade em contas de cliente (não só nos próprios usuários de teste do app) exige que a Meta aprove as permissões `instagram_content_publish` e `business_management` via **App Review** — um processo deles, com prazo próprio, que não dá pra pular.
+
+### Fora do escopo desta rodada
+- Escolher manualmente entre múltiplas páginas candidatas (hoje exige exatamente 1).
+- Qualquer feature que efetivamente publique (o agendador ainda só tem Telegram/e-mail/webhook como canais).
+- TikTok (mencionado no levantamento competitivo, mas o usuário pediu Instagram especificamente).
+- Freemium de IA por marca (visto no concorrente) — ficou de fora porque mudaria a economia da plataforma (Simplisoft pagando créditos de IA grátis do próprio bolso) e isso é uma decisão de negócio do usuário, não uma correção de mock → real.
+
+---
+
+## 🆕 SESSÃO 09/10/2026 — INTEGRAÇÃO COM GOOGLE DRIVE (OAuth por workspace)
+
+Pedido: o usuário mandou usuário/senha reais de um concorrente direto ("Modo Criador", `modocriador.com.br/admin`) e pediu uma navegação completa (Playwright) pra levantar funcionalidades — em especial conexão com Google Drive e Instagram — e trazer o que fizesse sentido pra nossa plataforma.
+
+### Pesquisa competitiva (navegação real, não suposição)
+Login feito de verdade no painel do concorrente (Playwright, sessão autenticada). Mapeado: Dashboard com checklist de onboarding ("Primeiros passos"), Clientes com importação via IA (planilha/print/PDF), Biblioteca de Referências (swipe file com extensão de Chrome, diferente de biblioteca de mídia produzida), Calendário unificado com sync de Google Agenda, hub de Instagram (+ TikTok) por cliente, Seleção de Fotos via link sem login, e — o ponto central — a aba Integrações: Google Drive (wizard de 3 passos: conectar conta → pasta raiz → vincular clientes, com reorganização automática de arquivos já anexados) e Inteligência Artificial em 3 modos (créditos pré-pagos do próprio app, chave própria Anthropic — **igual ao que construímos nesta mesma semana** —, e "em breve" modo manual copia-e-cola grátis), com **"Conectar IA (MCP)" travado atrás do plano Pro** — confirma que MCP já é percebido como diferencial pago no mercado brasileiro, reforçando a prioridade que o usuário já tinha dado a esse item.
+
+### O que foi implementado: Google Drive real, ponta a ponta
+- **Schema** (`backend/prisma/schema.prisma`): `GoogleDriveConnection` — 1 por workspace (`@unique` em `workspaceId`), com `accessToken`/`refreshToken` sempre criptografados (`enc:` + AES-256-GCM, mesmo `shared/security/crypto.ts` usado em Integrações/Credenciais), `tokenExpiresAt`, `connectedEmail`, `rootFolderId`/`rootFolderName`, `status`/`lastError`.
+- **Rotas** (`backend/src/modules/integrations/googleDrive.routes.ts`, montadas em `/api/integrations/google-drive`):
+  - `GET /connect-url` — gera a URL de consentimento do Google (`googleapis`' `OAuth2Client.generateAuthUrl`), com `scope: drive.file` (só arquivos que o próprio app cria — nunca o Drive inteiro do cliente) + `userinfo.email`. O `state` é um JWT assinado de 10 minutos (`fastify.jwt.sign`) carregando `{workspaceId, userId}` — necessário porque o próximo passo (callback) é uma navegação pura do navegador vindo do Google, sem Authorization header.
+  - `GET /callback` — sem `moduleGuard` (não há sessão aqui); verifica o `state` (`fastify.jwt.verify`), troca o `code` por tokens (`getToken`), busca o e-mail da conta via `google.oauth2().userinfo.get()`, **cria automaticamente uma pasta raiz** no Drive do cliente (`drive.files.create`, nome `"AI Creative Studio — <workspace>"`) e grava tudo criptografado em `GoogleDriveConnection` (upsert). Qualquer erro no meio do caminho (ex.: Google não devolveu `refresh_token` porque o usuário já tinha autorizado antes) vira uma mensagem clara, nunca uma tela de erro genérica — redireciona de volta pro app com `?gdrive=erro&msg=...`.
+  - `DELETE /disconnect` — revoga o token no Google (`revokeToken`, best-effort) e apaga a linha do banco.
+  - `GET /status` — nunca devolve token, só `{connected, email, rootFolderName, status}`.
+  - Helper exportado `getDriveClientForWorkspace(workspaceId)` — já pronto pra qualquer feature futura que precise subir arquivo na pasta do cliente (ex.: exportar um carrossel direto pro Drive); renova o access token sozinho quando está a menos de 1 minuto de expirar, e persiste o novo token.
+- **Config** (`backend/src/config/env.ts`, `.env.example`, `docker-compose.yml`, `docker-compose.prod.yml`): `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (opcionais — sem eles, `/connect-url` devolve 422 honesto em vez de simular uma conexão) e `PUBLIC_WEB_URL` (novo — origem do navegador pra onde o OAuth volta; diferente de `PUBLIC_API_URL` em dev porque o frontend fica atrás do proxy do Vite em `:8080` enquanto a API publica `:3000` direto; em produção os dois são o mesmo domínio, já que o Caddy serve tudo atrás de `aihub.simplisoft.com.br`).
+- **Frontend** (`frontend/index.html`, `frontend/apiClient.js`): card "Google Drive" na tela de Integrações — mesmo badge honesto "NÃO CONFIGURADO"/"CONECTADO" dos provedores de IA, com e-mail e nome da pasta quando conectado. Botão "Conectar" faz `window.location.href` pra URL do Google (navegação de página inteira, não popup — evita bloqueio de pop-up). `componentDidMount` lê `?gdrive=conectado|erro&msg=` na volta do OAuth, mostra a mensagem certa e limpa a URL (`history.replaceState`).
+
+### Validado ao vivo
+Com `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` vazios (estado atual desta instalação): o card mostra "NÃO CONFIGURADO" e, ao clicar "Conectar Google Drive", aparece o aviso exato "Integração com Google Drive não está configurada nesta instalação. Peça ao administrador da plataforma para cadastrar GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET." — nenhuma simulação de conexão. `npx tsc --noEmit` = 0 erros.
+
+### O que falta (não é código — é configuração externa)
+Alguém com acesso ao Google precisa: criar um projeto em `console.cloud.google.com`, ativar a **Google Drive API**, configurar a tela de consentimento OAuth (modo "Externo" ou "Interno" conforme o caso) e criar uma credencial "ID do cliente OAuth" do tipo "Aplicativo da Web", com **Authorized redirect URI** = `<PUBLIC_API_URL>/api/integrations/google-drive/callback` (em dev: `http://localhost:3000/api/integrations/google-drive/callback`; em produção: `https://aihub.simplisoft.com.br/api/integrations/google-drive/callback`). Colar o Client ID/Secret resultante em `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` no `.env`. Isso não pode ser feito por aqui — é uma conta/projeto do Google do próprio usuário.
+
+### Fora do escopo desta rodada (próximos passos naturais)
+- Ainda não existe nenhuma feature que **use** a pasta conectada (upload de brand assets, export do carrossel direto pro Drive do cliente) — só a conexão em si. O helper `getDriveClientForWorkspace()` já está pronto pra isso.
+- Outras ideias do levantamento competitivo (checklist de onboarding na Dashboard, publicação direta no Instagram/TikTok por cliente, freemium de IA por marca) ficaram só documentadas — não implementadas nesta sessão.
 
 ---
 

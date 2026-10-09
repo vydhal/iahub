@@ -108,8 +108,48 @@ model Workspace {
   subscription     Subscription?
   invoices         Invoice[]
   scheduledPosts   ScheduledPost[]
+  googleDrive      GoogleDriveConnection?
+  mcpToken         McpToken?
 
   @@map("workspaces")
+}
+
+// Token de acesso ao servidor MCP do workspace (Configurações → Integrações → Conectar IA).
+// Só o hash é guardado — o valor em texto puro aparece uma única vez, na hora de gerar, e nunca
+// mais pode ser lido de volta (mesmo princípio de um token de API comum).
+model McpToken {
+  id          String    @id @default(uuid())
+  workspaceId String    @unique
+  tokenHash   String    @unique
+  label       String    @default("Claude / MCP")
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("mcp_tokens")
+}
+
+// Conexão OAuth do Google Drive da agência (1 por workspace — cada agência conecta a própria
+// conta, nenhuma outra agência ou cliente tem acesso a ela). Tokens sempre criptografados
+// (ver shared/security/crypto.ts), nunca devolvidos crus pela API.
+model GoogleDriveConnection {
+  id             String   @id @default(uuid())
+  workspaceId    String   @unique
+  connectedEmail String?
+  accessToken    String   @db.Text // enc:...
+  refreshToken   String   @db.Text // enc:...
+  tokenExpiresAt DateTime
+  rootFolderId   String?
+  rootFolderName String?
+  status         String   @default("connected") // connected | error
+  lastError      String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("google_drive_connections")
 }
 
 model WorkspaceMember {
@@ -152,11 +192,34 @@ model Brand {
   guidelines     BrandGuideline[]
   products       BrandProduct[]
   services       BrandService[]
+  instagram      InstagramConnection?
   assets         BrandAsset[]
   projects       Project[]
   campaigns      Campaign[]
 
   @@map("brands")
+}
+
+// Conta do Instagram do cliente conectada via Facebook Login (Graph API) — 1 por marca.
+// Publicar de verdade (POST /media + /media_publish) fica pra uma próxima etapa; esta é só a
+// conexão (OAuth + escolha de qual conta IG Business vincular a esta marca).
+model InstagramConnection {
+  id              String   @id @default(uuid())
+  brandId         String   @unique
+  pageId          String   // Página do Facebook vinculada
+  pageName        String?
+  igBusinessId    String   // Instagram Business Account ID (o que realmente publica)
+  igUsername      String?
+  accessToken     String   @db.Text // enc:... — token de usuário de longa duração
+  tokenExpiresAt  DateTime?
+  status          String   @default("connected") // connected | error
+  lastError       String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  brand           Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("instagram_connections")
 }
 
 model BrandColor {
